@@ -1,0 +1,19 @@
+###########################################
+#    MofuAssistant Configuration File!!   #
+#             Author: NAFU_at             #
+#            Version: 1.0                 #
+###########################################
+
+# This configuration is necessary to use this plugin.
+initialization:
+  #This is an SQL setting to store data for this plugin.
+  database:
+    type: MARIADB # MYSQL or MARIADB
+    address: localhost
+    port: 3306
+    database: mofuassistant
+    username: mofuassistant
+    password: MoFuAsSiStAnT
+    tablePrefix: ma_
+
+debug: false

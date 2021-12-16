@@ -1,0 +1,10 @@
+name: MofuAssistant
+version: '${version}'
+main: page.nafuchoco.mofu.mofuassistant.MofuAssistant
+api-version: 1.17
+authors: [ NAFU_at ]
+website: https://github.com/mofucraft
+
+commands:
+  peaceful:
+    description: Experience a simulated Peaceful Mode.
