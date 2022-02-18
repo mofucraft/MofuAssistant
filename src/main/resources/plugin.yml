@@ -8,3 +8,6 @@ website: https://github.com/mofucraft
 commands:
   peaceful:
     description: Experience a simulated Peaceful Mode.
+
+    assistant:
+      description: Configure settings related to plugins.

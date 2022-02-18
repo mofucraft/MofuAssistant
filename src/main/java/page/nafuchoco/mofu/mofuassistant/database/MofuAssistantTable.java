@@ -16,8 +16,7 @@
 
 package page.nafuchoco.mofu.mofuassistant.database;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import lombok.val;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistant;
 import page.nafuchoco.mofu.mofuassistant.data.MofuPlayerData;
@@ -27,7 +26,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 
 public class MofuAssistantTable extends DatabaseTable {
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final Gson mapper = new Gson();
 
     public MofuAssistantTable(String tablename, DatabaseConnector connector) {
         super(tablename, connector);
@@ -45,11 +44,7 @@ public class MofuAssistantTable extends DatabaseTable {
              )) {
             ps.setString(1, playerData.getId().toString());
             ps.setString(2, playerData.getPlayerName());
-            try {
-                ps.setString(3, mapper.writeValueAsString(playerData.getSettings()));
-            } catch (JsonProcessingException e) {
-                MofuAssistant.getInstance().getLogger().log(Level.WARNING, "Failed to serialize the player settings.", e);
-            }
+            ps.setString(3, mapper.toJson(playerData.getSettings()));
             ps.execute();
         }
     }
@@ -63,11 +58,9 @@ public class MofuAssistantTable extends DatabaseTable {
             try (var resultSet = ps.executeQuery()) {
                 while (resultSet.next()) {
                     val playername = resultSet.getString("playername");
-                    val playerSettings = mapper.readValue(resultSet.getString("player_data"), MofuPlayerData.PlayerSettings.class);
+                    val playerSettings = mapper.fromJson(resultSet.getString("player_data"), MofuPlayerData.PlayerSettings.class);
                     return new MofuPlayerData(id, playername, playerSettings);
                 }
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
             }
         } catch (SQLException e) {
             MofuAssistant.getInstance().getLogger().log(Level.WARNING, "Failed to get player data.", e);
@@ -82,11 +75,7 @@ public class MofuAssistantTable extends DatabaseTable {
              )) {
             ps.setString(3, playerData.getId().toString());
             ps.setString(1, playerData.getPlayerName());
-            try {
-                ps.setString(2, mapper.writeValueAsString(playerData.getSettings()));
-            } catch (JsonProcessingException e) {
-                MofuAssistant.getInstance().getLogger().log(Level.WARNING, "Failed to serialize the player settings.", e);
-            }
+            ps.setString(2, mapper.toJson(playerData.getSettings()));
             ps.execute();
         }
     }

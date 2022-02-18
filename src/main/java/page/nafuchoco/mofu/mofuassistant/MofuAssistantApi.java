@@ -43,8 +43,10 @@ public class MofuAssistantApi {
 
     public MofuPlayerData getPlayerData(@NonNull Player player) {
         var playerData = playerStore.get(player);
-        if (playerData == null)
+        if (playerData == null) {
             playerData = getPlayerData(player.getUniqueId());
+            playerStore.put(player, playerData);
+        }
 
         return playerData;
     }
@@ -57,10 +59,12 @@ public class MofuAssistantApi {
             try {
                 mofuAssistant.getMofuAssistantTable().registerPlayer(playerData);
             } catch (SQLException e) {
-                MofuAssistant.getInstance().getLogger().log(Level.WARNING, "Failed to register the player data.", e);
+                mofuAssistant.getLogger().log(Level.WARNING, "Failed to register the player data.", e);
             }
         }
 
+        if (mofuAssistant.getPluginConfig().isDebug())
+            mofuAssistant.getLogger().log(Level.INFO, playerData.toString());
         return playerData;
     }
 

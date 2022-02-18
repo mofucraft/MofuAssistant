@@ -33,7 +33,7 @@ public class PeacefulModeEventListener implements Listener {
     public void onEntityTargetEvent(EntityTargetEvent event) {
         if (event.getTarget() instanceof Player player && event.getEntity() instanceof Monster) {
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-            if (playerData.getSettings().isPeacefulMode()) {
+            if (playerData.getSettings().isPeacefulMode(player.getWorld())) {
                 if (event.getEntity() instanceof Monster
                         && (event.getReason() == EntityTargetEvent.TargetReason.CLOSEST_PLAYER
                         || event.getReason() == EntityTargetEvent.TargetReason.TARGET_ATTACKED_ENTITY
@@ -47,7 +47,7 @@ public class PeacefulModeEventListener implements Listener {
     public void onEntityDamageEvent(EntityDamageEvent event) {
         if (event.getEntity() instanceof Player player) {
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-            if (playerData.getSettings().isPeacefulMode()) {
+            if (playerData.getSettings().isPeacefulMode(player.getWorld())) {
                 if (player.getHealth() - event.getDamage() < 20.0) {
                     val effect = new PotionEffect(PotionEffectType.REGENERATION, 100, 2, false, false, false);
                     player.addPotionEffect(effect);
@@ -62,14 +62,14 @@ public class PeacefulModeEventListener implements Listener {
         // プレイヤーに対する攻撃に関する処理
         if (event.getEntity() instanceof Player player) {
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-            if (playerData.getSettings().isPeacefulMode()) {
+            if (playerData.getSettings().isPeacefulMode(player.getWorld())) {
                 if (event.getDamager() instanceof TNTPrimed) // TNT爆破の無効化
                     cancelled = true;
             }
         } else if (event.getDamager() instanceof Player player
                 && event.getEntity() instanceof Monster) { // プレイヤーによる攻撃に関する処理
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-            if (playerData.getSettings().isPeacefulMode() && !player.hasPermission("soloservercore.peaceful.bypass"))
+            if (playerData.getSettings().isPeacefulMode(player.getWorld()) && !player.hasPermission("soloservercore.peaceful.bypass"))
                 cancelled = true;
         }
 
@@ -80,7 +80,7 @@ public class PeacefulModeEventListener implements Listener {
     public void onEntityPotionEffectEvent(EntityPotionEffectEvent event) {
         if (event.getEntity() instanceof Player player) {
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-            if (playerData.getSettings().isPeacefulMode() && event.getNewEffect() != null) {
+            if (playerData.getSettings().isPeacefulMode(player.getWorld()) && event.getNewEffect() != null) {
                 val effectType = event.getNewEffect().getType();
                 if (PotionEffectType.POISON.equals(effectType)
                         || PotionEffectType.WITHER.equals(effectType)
@@ -96,7 +96,7 @@ public class PeacefulModeEventListener implements Listener {
     public void onFoodLevelChangeEvent(FoodLevelChangeEvent event) {
         if (event.getEntity() instanceof Player player) {
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-            if (playerData.getSettings().isPeacefulMode()) {
+            if (playerData.getSettings().isPeacefulMode(player.getWorld())) {
                 if (event.getFoodLevel() < 20) { // 空腹度の回復
                     val effect = new PotionEffect(PotionEffectType.SATURATION, 40, 0, false, false, false);
                     player.addPotionEffect(effect);

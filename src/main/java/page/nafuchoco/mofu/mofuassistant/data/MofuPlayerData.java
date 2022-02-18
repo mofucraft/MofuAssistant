@@ -16,11 +16,17 @@
 
 package page.nafuchoco.mofu.mofuassistant.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistant;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -82,22 +88,73 @@ public class MofuPlayerData {
 
         try {
             MofuAssistant.getInstance().getMofuAssistantTable().updatePlayerData(updateDate);
+
+            if (MofuAssistant.getInstance().getPluginConfig().isDebug())
+                MofuAssistant.getInstance().getLogger().log(Level.INFO, this.toString());
         } catch (SQLException e) {
             MofuAssistant.getInstance().getLogger().log(Level.WARNING, "Failed to update the player data.", e);
         }
     }
 
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class PlayerSettings {
-        private boolean peacefulMode;
+        private List<String> peacefulEnabledWorld;
 
+        public boolean isPeacefulMode(World world) {
+            if (peacefulEnabledWorld == null)
+                peacefulEnabledWorld = new ArrayList<>();
 
-        public boolean isPeacefulMode() {
-            return peacefulMode;
+            if (MofuAssistant.getInstance().getPluginConfig().getPeacefulModeConfig().keepChangeWorld())
+                return !peacefulEnabledWorld.isEmpty();
+            else
+                return peacefulEnabledWorld.contains(world.getName());
         }
 
-        public void setPeacefulMode(boolean peacefulMode) {
-            this.peacefulMode = peacefulMode;
+        public void setPeacefulMode(World world, boolean enable) {
+            if (peacefulEnabledWorld == null)
+                peacefulEnabledWorld = new ArrayList<>();
+
+            if (enable) {
+                if (!peacefulEnabledWorld.contains(world.getName()))
+                    peacefulEnabledWorld.add(world.getName());
+            } else
+                peacefulEnabledWorld.remove(world.getName());
         }
+
+
+        @Override
+        public String toString() {
+            return "PlayerSettings{" +
+                    "peacefulEnabledWorld=" + peacefulEnabledWorld +
+                    '}';
+        }
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MofuPlayerData that = (MofuPlayerData) o;
+
+        return new EqualsBuilder().append(getId(), that.getId()).append(getPlayerName(), that.getPlayerName()).append(getBukkitPlayer(), that.getBukkitPlayer()).isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37).append(getId()).append(getPlayerName()).append(getBukkitPlayer()).toHashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "MofuPlayerData{" +
+                "id=" + id +
+                ", playerName='" + playerName + '\'' +
+                ", bukkitPlayer=" + bukkitPlayer +
+                ", settings=" + settings +
+                '}';
     }
 }

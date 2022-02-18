@@ -16,4 +16,11 @@ initialization:
     password: MoFuAsSiStAnT
     tablePrefix: ma_
 
+
+peacefulMode:
+  enable: true # Enable/Disable Peaceful Mode
+  worldWhitelist: false # Enable/Disable whitelist
+  targetWorld: [ ] # Specify the world to be whitelisted if the whitelist setting is enabled, or the world to be blacklisted if it is disabled.
+  keepChangeWorld: false # Keeps peaceful mode when switching worlds.
+
 debug: false

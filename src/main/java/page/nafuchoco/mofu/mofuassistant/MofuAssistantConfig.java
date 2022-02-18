@@ -20,30 +20,42 @@ import lombok.val;
 import org.bukkit.configuration.file.FileConfiguration;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
 
+import java.util.List;
+
 public class MofuAssistantConfig {
     private static final MofuAssistant instance = MofuAssistant.getInstance();
     private InitConfig initConfig;
+    private PeacefulModeConfig peacefulModeConfig;
     private boolean debug;
 
     public void reloadConfig() {
         instance.reloadConfig();
         FileConfiguration config = instance.getConfig();
 
-        if (initConfig == null) {
-            val databaseType = DatabaseConnector.DatabaseType.valueOf(config.getString("initialization.database.type"));
-            val address = config.getString("initialization.database.address");
-            val port = config.getInt("initialization.database.port", 3306);
-            val database = config.getString("initialization.database.database");
-            val username = config.getString("initialization.database.username");
-            val password = config.getString("initialization.database.password");
-            val tablePrefix = config.getString("initialization.database.tablePrefix");
-            initConfig = new InitConfig(databaseType, address, port, database, username, password, tablePrefix);
-            debug = config.getBoolean("debug");
-        }
+        val databaseType = DatabaseConnector.DatabaseType.valueOf(config.getString("initialization.database.type"));
+        val address = config.getString("initialization.database.address");
+        val port = config.getInt("initialization.database.port", 3306);
+        val database = config.getString("initialization.database.database");
+        val username = config.getString("initialization.database.username");
+        val password = config.getString("initialization.database.password");
+        val tablePrefix = config.getString("initialization.database.tablePrefix");
+        initConfig = new InitConfig(databaseType, address, port, database, username, password, tablePrefix);
+
+        val peacefulModeEnable = config.getBoolean("peacefulMode.enable");
+        val worldWhitelist = config.getBoolean("peacefulMode.worldWhitelist");
+        val targetWorld = config.getStringList("peacefulMode.targetWorld");
+        val keepChangeWorld = config.getBoolean("peacefulMode.keepChangeWorld");
+        peacefulModeConfig = new PeacefulModeConfig(peacefulModeEnable, worldWhitelist, targetWorld, keepChangeWorld);
+
+        debug = config.getBoolean("debug");
     }
 
     public InitConfig getInitConfig() {
         return initConfig;
+    }
+
+    public PeacefulModeConfig getPeacefulModeConfig() {
+        return peacefulModeConfig;
     }
 
     public boolean isDebug() {
@@ -81,5 +93,18 @@ public class MofuAssistantConfig {
         public String getTablePrefix() {
             return tablePrefix;
         }
+    }
+
+    public record PeacefulModeConfig(boolean enable, boolean worldWhitelist, List<String> targetWorld,
+                                     boolean keepChangeWorld) {
+    }
+
+    @Override
+    public String toString() {
+        return "MofuAssistantConfig{" +
+                "initConfig=" + initConfig +
+                ", peacefulModeConfig=" + peacefulModeConfig +
+                ", debug=" + debug +
+                '}';
     }
 }

@@ -54,6 +54,8 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         saveDefaultConfig();
         config = new MofuAssistantConfig();
         getPluginConfig().reloadConfig();
+        if (getPluginConfig().isDebug())
+            getInstance().getLogger().log(Level.INFO, getPluginConfig().toString());
 
         connector = new DatabaseConnector(getPluginConfig().getInitConfig().getDatabaseType(),
                 getPluginConfig().getInitConfig().getAddress() + ":" + getPluginConfig().getInitConfig().getPort(),
@@ -85,12 +87,31 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         if (!sender.hasPermission("mofuassistant." + command.getName())) {
             sender.sendMessage(ChatColor.RED + "You can't run this command because you don't have permission.");
         } else switch (command.getName()) {
+            case "assistant":
+                if (args.length == 0)
+                    return false;
+                else switch (args[0]) {
+                    case "reload":
+                        getPluginConfig().reloadConfig();
+                        sender.sendMessage(ChatColor.GREEN + "[MofuAssistant] Successfully reloaded the configuration.");
+                        break;
+
+                    default:
+                        return false;
+                }
+
             case "peaceful":
-                if (sender instanceof Player player) {
-                    val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-                    playerData.getSettings().setPeacefulMode(!playerData.getSettings().isPeacefulMode());
-                    playerData.updatePlayerData();
-                    player.sendMessage(ChatColor.GREEN + "[MofuAssistant] ピースフルモードを切り替えました。: " + playerData.getSettings().isPeacefulMode());
+                if (getPluginConfig().getPeacefulModeConfig().enable()) {
+                    if (sender instanceof Player player) {
+                        if (getPluginConfig().getPeacefulModeConfig().worldWhitelist()
+                                ^ getPluginConfig().getPeacefulModeConfig().targetWorld().contains(player.getWorld().getName()))
+                            break;
+
+                        val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
+                        playerData.getSettings().setPeacefulMode(player.getWorld(), !playerData.getSettings().isPeacefulMode(player.getWorld()));
+                        playerData.updatePlayerData();
+                        player.sendMessage(ChatColor.GREEN + "[MofuAssistant] ピースフルモードを切り替えました。: " + playerData.getSettings().isPeacefulMode(player.getWorld()));
+                    }
                 }
                 break;
 
