@@ -32,14 +32,17 @@ public class MofuAssistantConfig {
         instance.reloadConfig();
         FileConfiguration config = instance.getConfig();
 
-        val databaseType = DatabaseConnector.DatabaseType.valueOf(config.getString("initialization.database.type"));
+        // TODO: 2022/03/09 何らかの影響でMariaDBのドライバが他プラグインと競合したため一時的に無効化
+        // val databaseType = DatabaseConnector.DatabaseType.valueOf(config.getString("initialization.database.type"));
+        val databaseType = DatabaseConnector.DatabaseType.MYSQL;
         val address = config.getString("initialization.database.address");
         val port = config.getInt("initialization.database.port", 3306);
         val database = config.getString("initialization.database.database");
         val username = config.getString("initialization.database.username");
         val password = config.getString("initialization.database.password");
         val tablePrefix = config.getString("initialization.database.tablePrefix");
-        initConfig = new InitConfig(databaseType, address, port, database, username, password, tablePrefix);
+        val bypassHikariCP = config.getBoolean("initialization.database.bypassHikariCP", true);
+        initConfig = new InitConfig(databaseType, address, port, database, username, password, tablePrefix, bypassHikariCP);
 
         val peacefulModeEnable = config.getBoolean("peacefulMode.enable");
         val worldWhitelist = config.getBoolean("peacefulMode.worldWhitelist");
@@ -64,7 +67,7 @@ public class MofuAssistantConfig {
 
     public record InitConfig(DatabaseConnector.DatabaseType databaseType,
                              String address, int port, String database, String username,
-                             String password, String tablePrefix) {
+                             String password, String tablePrefix, boolean bypassHikariCP) {
 
         public DatabaseConnector.DatabaseType getDatabaseType() {
             return databaseType;
@@ -92,6 +95,10 @@ public class MofuAssistantConfig {
 
         public String getTablePrefix() {
             return tablePrefix;
+        }
+
+        public boolean bypassHikariCP() {
+            return bypassHikariCP;
         }
     }
 

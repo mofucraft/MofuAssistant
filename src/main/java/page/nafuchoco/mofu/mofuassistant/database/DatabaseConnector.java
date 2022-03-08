@@ -21,13 +21,15 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.val;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnector {
     private final HikariDataSource dataSource;
     private final String prefix;
+    private final boolean bypassHikariCP;
 
-    public DatabaseConnector(DatabaseType databaseType, String address, String database, String username, String password, String prefix) {
+    public DatabaseConnector(DatabaseType databaseType, String address, String database, String username, String password, String prefix, boolean bypassHikariCP) {
         val hconfig = new HikariConfig();
         hconfig.setDriverClassName(databaseType.getJdbcClass());
         hconfig.setJdbcUrl(databaseType.getAddressPrefix() + address + "/" + database);
@@ -35,9 +37,12 @@ public class DatabaseConnector {
         hconfig.addDataSourceProperty("password", password);
         dataSource = new HikariDataSource(hconfig);
         this.prefix = prefix;
+        this.bypassHikariCP = bypassHikariCP;
     }
 
     public Connection getConnection() throws SQLException {
+        if (bypassHikariCP)
+            return DriverManager.getConnection(dataSource.getJdbcUrl(), dataSource.getUsername(), dataSource.getPassword());
         return dataSource.getConnection();
     }
 

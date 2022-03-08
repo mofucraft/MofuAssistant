@@ -62,7 +62,8 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
                 getPluginConfig().getInitConfig().getDatabase(),
                 getPluginConfig().getInitConfig().getUsername(),
                 getPluginConfig().getInitConfig().getPassword(),
-                getPluginConfig().getInitConfig().getTablePrefix());
+                getPluginConfig().getInitConfig().getTablePrefix(),
+                getPluginConfig().getInitConfig().bypassHikariCP());
         mofuAssistantTable = new MofuAssistantTable("playerdata", connector);
 
         try {

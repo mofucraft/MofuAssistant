@@ -15,6 +15,7 @@ initialization:
     username: mofuassistant
     password: MoFuAsSiStAnT
     tablePrefix: ma_
+    bypassHikariCP: true # Connect to MySQL in a way that does not use HikariCP.
 
 
 peacefulMode:
