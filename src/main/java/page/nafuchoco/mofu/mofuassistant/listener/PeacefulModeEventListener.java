@@ -17,8 +17,6 @@
 package page.nafuchoco.mofu.mofuassistant.listener;
 
 import lombok.val;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Phantom;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
@@ -26,20 +24,20 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import page.nafuchoco.mofu.mofuassistant.MobHelper;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistantApi;
 
 public class PeacefulModeEventListener implements Listener {
 
     @EventHandler
     public void onEntityTargetEvent(EntityTargetEvent event) {
-        if (event.getTarget() instanceof Player player &&
-                (event.getEntity() instanceof Monster || event.getEntity() instanceof Phantom)) {
+        if (event.getTarget() instanceof Player player) {
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
             if (playerData.getSettings().isPeacefulMode(player.getWorld())) {
-                if (event.getEntity() instanceof Monster
-                        && (event.getReason() == EntityTargetEvent.TargetReason.CLOSEST_PLAYER
-                        || event.getReason() == EntityTargetEvent.TargetReason.TARGET_ATTACKED_ENTITY
-                        || event.getReason() == EntityTargetEvent.TargetReason.TARGET_ATTACKED_NEARBY_ENTITY))
+                if (MobHelper.isOffensive(event.getEntity()) &&
+                        (event.getReason() == EntityTargetEvent.TargetReason.CLOSEST_PLAYER
+                                || event.getReason() == EntityTargetEvent.TargetReason.TARGET_ATTACKED_ENTITY
+                                || event.getReason() == EntityTargetEvent.TargetReason.TARGET_ATTACKED_NEARBY_ENTITY))
                     event.setCancelled(true);
             }
         }
@@ -69,7 +67,7 @@ public class PeacefulModeEventListener implements Listener {
                     cancelled = true;
             }
         } else if (event.getDamager() instanceof Player player
-                && (event.getEntity() instanceof Monster || event.getEntity() instanceof Phantom)) { // プレイヤーによる攻撃に関する処理
+                && MobHelper.isHostile(event.getEntity())) { // プレイヤーによる攻撃に関する処理
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
             if (playerData.getSettings().isPeacefulMode(player.getWorld()) && !player.hasPermission("mofuassistant.peaceful.bypass"))
                 cancelled = true;

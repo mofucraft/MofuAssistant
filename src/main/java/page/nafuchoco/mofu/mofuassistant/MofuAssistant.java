@@ -109,6 +109,8 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
 
                         val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
                         playerData.getSettings().setPeacefulMode(player.getWorld(), !playerData.getSettings().isPeacefulMode(player.getWorld()));
+                        val peacefulModeChangeEvent = new PlayerPeacefulModeChangeEvent(player);
+                        getServer().getPluginManager().callEvent(peacefulModeChangeEvent);
                         playerData.updatePlayerData();
                         player.sendMessage(ChatColor.GREEN + "[MofuAssistant] ピースフルモードを切り替えました。: " + playerData.getSettings().isPeacefulMode(player.getWorld()));
                     }
@@ -126,6 +128,19 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         MofuAssistantApi.getInstance().dropStoreData(event.getPlayer());
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerPeacefulModeChangeEvent(PlayerPeacefulModeChangeEvent event) {
+        if (MofuAssistantApi.getInstance().getPlayerData(event.getPlayer()).getSettings().isPeacefulMode(event.getPlayer().getWorld())) {
+            MobHelper.getOffensive(event.getPlayer().getNearbyEntities(40, 40, 40)).forEach(
+                    entity -> {
+                        // 既にターゲット中のMobのターゲットを解除
+                        if (entity.getTarget() instanceof Player target
+                                && target.equals(event.getPlayer()))
+                            entity.setTarget(null);
+                    }
+            );
+        }
+    }
 
     public MofuAssistantConfig getPluginConfig() {
         return config;
