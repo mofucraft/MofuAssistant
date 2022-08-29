@@ -18,6 +18,7 @@ package page.nafuchoco.mofu.mofuassistant.listener;
 
 import lombok.val;
 import org.bukkit.entity.Monster;
+import org.bukkit.entity.Phantom;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
@@ -70,7 +71,7 @@ public class PeacefulModeEventListener implements Listener {
         } else if (event.getDamager() instanceof Player player
                 && (event.getEntity() instanceof Monster || event.getEntity() instanceof Phantom)) { // プレイヤーによる攻撃に関する処理
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
-            if (playerData.getSettings().isPeacefulMode(player.getWorld()) && !player.hasPermission("soloservercore.peaceful.bypass"))
+            if (playerData.getSettings().isPeacefulMode(player.getWorld()) && !player.hasPermission("mofuassistant.peaceful.bypass"))
                 cancelled = true;
         }
 
