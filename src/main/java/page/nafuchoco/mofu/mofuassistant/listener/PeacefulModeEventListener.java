@@ -31,7 +31,8 @@ public class PeacefulModeEventListener implements Listener {
 
     @EventHandler
     public void onEntityTargetEvent(EntityTargetEvent event) {
-        if (event.getTarget() instanceof Player player && event.getEntity() instanceof Monster) {
+        if (event.getTarget() instanceof Player player &&
+                (event.getEntity() instanceof Monster || event.getEntity() instanceof Phantom)) {
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
             if (playerData.getSettings().isPeacefulMode(player.getWorld())) {
                 if (event.getEntity() instanceof Monster
@@ -67,7 +68,7 @@ public class PeacefulModeEventListener implements Listener {
                     cancelled = true;
             }
         } else if (event.getDamager() instanceof Player player
-                && event.getEntity() instanceof Monster) { // プレイヤーによる攻撃に関する処理
+                && (event.getEntity() instanceof Monster || event.getEntity() instanceof Phantom)) { // プレイヤーによる攻撃に関する処理
             val playerData = MofuAssistantApi.getInstance().getPlayerData(player);
             if (playerData.getSettings().isPeacefulMode(player.getWorld()) && !player.hasPermission("soloservercore.peaceful.bypass"))
                 cancelled = true;
