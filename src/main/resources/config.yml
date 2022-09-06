@@ -17,10 +17,41 @@ initialization:
     tablePrefix: ma_
 
 
+# Provides a temporary peaceful mode for the server.
 peacefulMode:
   enable: true # Enable/Disable Peaceful Mode
   worldWhitelist: false # Enable/Disable whitelist
   targetWorld: [ ] # Specify the world to be whitelisted if the whitelist setting is enabled, or the world to be blacklisted if it is disabled.
   keepChangeWorld: false # Keeps peaceful mode when switching worlds.
+
+
+# Assists in the migration of player data.
+dataMigrationSupport:
+  - type: MARIADB # MYSQL or MARIADB
+    address: localhost
+    port: 3306
+    database: mofuassistant
+    username: mofuassistant
+    password: MoFuAsSiStAnT
+    targetTable:
+      - name: lwc_history
+        columns:
+          - player
+      - name: lwc_protections
+        columns:
+          - owner
+
+  - type: MARIADB # MYSQL or MARIADB
+    address: localhost
+    port: 3306
+    database: mofuassistant
+    username: mofuassistant
+    password: MoFuAsSiStAnT
+    targetTable:
+      - name: mcmmo_users
+        columns:
+          - user
+          - uuid
+
 
 debug: false

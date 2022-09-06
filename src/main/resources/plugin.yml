@@ -9,5 +9,21 @@ commands:
   peaceful:
     description: Experience a simulated Peaceful Mode.
 
-    assistant:
-      description: Configure settings related to plugins.
+  assistant:
+    description: Configure settings related to plugins.
+
+  migrate:
+    description: Migrate player data.
+
+permissions:
+  mofuassistant.assistant:
+    description: Allows you to use the assistant command.
+    default: op
+
+  mofuassistant.peaceful:
+    description: Allows you to use the peaceful command.
+    default: op
+
+  mofuassistant.migrate:
+    description: Allows you to migrate player data.
+    default: false

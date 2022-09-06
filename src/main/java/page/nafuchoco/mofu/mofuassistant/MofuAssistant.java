@@ -19,22 +19,29 @@ package page.nafuchoco.mofu.mofuassistant;
 import lombok.val;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
 import page.nafuchoco.mofu.mofuassistant.database.MofuAssistantTable;
+import page.nafuchoco.mofu.mofuassistant.event.PlayerPeacefulModeChangeEvent;
 import page.nafuchoco.mofu.mofuassistant.listener.PeacefulModeEventListener;
 
 import java.sql.SQLException;
+import java.util.UUID;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 public final class MofuAssistant extends JavaPlugin implements Listener {
+    private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
+    //private static final Pattern NO_DELIMITER_UUID_PATTERN = Pattern.compile("^[0-9a-f]{32}$");
     private static MofuAssistant instance;
 
     public static MofuAssistant getInstance() {
@@ -115,6 +122,29 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
                         player.sendMessage(ChatColor.GREEN + "[MofuAssistant] ピースフルモードを切り替えました。: " + playerData.getSettings().isPeacefulMode(player.getWorld()));
                     }
                 }
+                break;
+
+            case "migrate":
+                if (args.length != 2) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /migrate <original player> <new player>");
+                    return true;
+                }
+
+                OfflinePlayer originalPlayer;
+                OfflinePlayer newPlayer;
+
+                if (UUID_PATTERN.matcher(args[0]).matches())
+                    originalPlayer = Bukkit.getOfflinePlayer(UUID.fromString(args[0]));
+                else originalPlayer = Bukkit.getOfflinePlayer(args[0]);
+
+                if (UUID_PATTERN.matcher(args[1]).matches())
+                    newPlayer = Bukkit.getOfflinePlayer(UUID.fromString(args[1]));
+                else newPlayer = Bukkit.getOfflinePlayer(args[1]);
+
+                sender.sendMessage(ChatColor.GREEN + "[MofuAssistant] データの移行を開始します...");
+                var migrationManager = new MigrationManager();
+                migrationManager.migrate(originalPlayer, newPlayer);
+                sender.sendMessage(ChatColor.GREEN + "[MofuAssistant] データの移行が完了しました。");
                 break;
 
             default:
