@@ -94,17 +94,15 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         if (!sender.hasPermission("mofuassistant." + command.getName())) {
             sender.sendMessage(ChatColor.RED + "You can't run this command because you don't have permission.");
         } else switch (command.getName()) {
+
             case "assistant":
                 if (args.length == 0)
                     return false;
-                else switch (args[0]) {
-                    case "reload":
-                        getPluginConfig().reloadConfig();
-                        sender.sendMessage(ChatColor.GREEN + "[MofuAssistant] Successfully reloaded the configuration.");
-                        break;
-
-                    default:
-                        return false;
+                else if ("reload".equals(args[0])) {
+                    getPluginConfig().reloadConfig();
+                    sender.sendMessage(ChatColor.GREEN + "[MofuAssistant] Successfully reloaded the configuration.");
+                } else {
+                    return false;
                 }
 
             case "peaceful":
