@@ -139,29 +139,15 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         getCommand("osusowaken").setExecutor(osusowakenCommand);
         getCommand("osusowaken").setTabCompleter(osusowakenCommand);
 
-        // コミュニティ招待コマンドの登録
+        // コミュニティコマンドの登録
         RegisteredServiceProvider<LuckPerms> provider = Bukkit.getServicesManager().getRegistration(LuckPerms.class);
         if (provider != null) {
             LuckPerms luckPerms = provider.getProvider();
-            CommunityInviteCommand inviteCommand = new CommunityInviteCommand(this, communityInviteTable, communityManager, luckPerms);
-            getCommand("co-invite").setExecutor(inviteCommand);
-            getCommand("co-invite").setTabCompleter(inviteCommand);
-            getCommand("co-cancel").setExecutor(inviteCommand);
-            getCommand("co-cancel").setTabCompleter(inviteCommand);
-            getCommand("co-check").setExecutor(inviteCommand);
-            getCommand("co-check").setTabCompleter(inviteCommand);
-            getCommand("co-check-o").setExecutor(inviteCommand);
-            getCommand("co-check-o").setTabCompleter(inviteCommand);
-            getCommand("co-accept").setExecutor(inviteCommand);
-            getCommand("co-accept").setTabCompleter(inviteCommand);
-            getCommand("co-deny").setExecutor(inviteCommand);
-            getCommand("co-deny").setTabCompleter(inviteCommand);
-            getCommand("co-leave").setExecutor(inviteCommand);
-            getCommand("co-leave").setTabCompleter(inviteCommand);
-            getCommand("co-who").setExecutor(inviteCommand);
-            getCommand("co-who").setTabCompleter(inviteCommand);
+            CommunityInviteCommand communityCommand = new CommunityInviteCommand(this, communityInviteTable, communityManager, luckPerms);
+            getCommand("community").setExecutor(communityCommand);
+            getCommand("community").setTabCompleter(communityCommand);
         } else {
-            getLogger().log(Level.WARNING, "LuckPerms not found. Community invite commands will not be registered.");
+            getLogger().log(Level.WARNING, "LuckPerms not found. Community commands will not be registered.");
         }
 
         getServer().getPluginManager().registerEvents(new PeacefulModeEventListener(), this);

@@ -61,32 +61,62 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                             @NotNull String label, @NotNull String[] args) {
-        String cmdName = command.getName().toLowerCase();
+        if (args.length == 0) {
+            return showHelp(sender);
+        }
 
-        switch (cmdName) {
-            case "co-invite":
-                return handleInvite(sender, args);
-            case "co-cancel":
-                return handleCancel(sender, args);
-            case "co-check":
-                return handleCheck(sender, args);
-            case "co-check-o":
-                return handleCheckOther(sender, args);
-            case "co-accept":
-                return handleAccept(sender, args);
-            case "co-deny":
-                return handleDeny(sender, args);
-            case "co-leave":
-                return handleLeave(sender, args);
-            case "co-who":
-                return handleWho(sender, args);
+        String subCommand = args[0].toLowerCase();
+        // サブコマンド用に引数配列を調整
+        String[] subArgs = new String[args.length - 1];
+        System.arraycopy(args, 1, subArgs, 0, args.length - 1);
+
+        switch (subCommand) {
+            case "invite":
+                return handleInvite(sender, subArgs);
+            case "cancel":
+                return handleCancel(sender, subArgs);
+            case "check":
+                if (subArgs.length > 0) {
+                    // /community check <player>
+                    return handleCheckOther(sender, subArgs);
+                } else {
+                    // /community check
+                    return handleCheck(sender, subArgs);
+                }
+            case "accept":
+                return handleAccept(sender, subArgs);
+            case "deny":
+                return handleDeny(sender, subArgs);
+            case "leave":
+                return handleLeave(sender, subArgs);
+            case "who":
+                return handleWho(sender, subArgs);
+            case "help":
+                return showHelp(sender);
             default:
-                return false;
+                sender.sendMessage(ChatColor.RED + "不明なサブコマンドです。/community help でヘルプを表示します。");
+                return true;
         }
     }
 
     /**
-     * /co-invite <player> <communityId> - プレイヤーを招待
+     * ヘルプメッセージを表示
+     */
+    private boolean showHelp(CommandSender sender) {
+        sender.sendMessage(ChatColor.GREEN + "=== Community コマンドヘルプ ===");
+        sender.sendMessage(ChatColor.YELLOW + "/community invite <player> <communityId> " + ChatColor.GRAY + "- プレイヤーを招待");
+        sender.sendMessage(ChatColor.YELLOW + "/community cancel <player> <communityId> " + ChatColor.GRAY + "- 招待をキャンセル");
+        sender.sendMessage(ChatColor.YELLOW + "/community check " + ChatColor.GRAY + "- 自分の招待を確認");
+        sender.sendMessage(ChatColor.YELLOW + "/community check <player> " + ChatColor.GRAY + "- 他プレイヤーの招待を確認");
+        sender.sendMessage(ChatColor.YELLOW + "/community accept <communityId> " + ChatColor.GRAY + "- 招待を受け入れ");
+        sender.sendMessage(ChatColor.YELLOW + "/community deny <communityId> " + ChatColor.GRAY + "- 招待を拒否");
+        sender.sendMessage(ChatColor.YELLOW + "/community leave <communityId> " + ChatColor.GRAY + "- コミュニティから脱退");
+        sender.sendMessage(ChatColor.YELLOW + "/community who <communityId> [page] " + ChatColor.GRAY + "- メンバー一覧");
+        return true;
+    }
+
+    /**
+     * /community invite <player> <communityId> - プレイヤーを招待
      */
     private boolean handleInvite(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -95,7 +125,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "使用方法: /co-invite <プレイヤー名> <コミュニティID>");
+            sender.sendMessage(ChatColor.RED + "使用方法: /community invite <プレイヤー名> <コミュニティID>");
             return true;
         }
 
@@ -130,7 +160,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /co-cancel <player> <communityId> - 招待をキャンセル
+     * /community cancel <player> <communityId> - 招待をキャンセル
      */
     private boolean handleCancel(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -139,7 +169,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "使用方法: /co-cancel <プレイヤー名> <コミュニティID>");
+            sender.sendMessage(ChatColor.RED + "使用方法: /community cancel <プレイヤー名> <コミュニティID>");
             return true;
         }
 
@@ -175,7 +205,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /co-check - 自分の招待を確認
+     * /community check - 自分の招待を確認
      */
     private boolean handleCheck(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -188,8 +218,8 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
             if (invite != null) {
                 String displayName = manager.getDisplayName(invite.getCommunityName());
                 player.sendMessage(PREFIX + displayName + " への招待があります");
-                player.sendMessage(ChatColor.GRAY + "受け入れる: " + ChatColor.GREEN + "/co-accept " + invite.getCommunityName());
-                player.sendMessage(ChatColor.GRAY + "拒否する: " + ChatColor.RED + "/co-deny " + invite.getCommunityName());
+                player.sendMessage(ChatColor.GRAY + "受け入れる: " + ChatColor.GREEN + "/community accept " + invite.getCommunityName());
+                player.sendMessage(ChatColor.GRAY + "拒否する: " + ChatColor.RED + "/community deny " + invite.getCommunityName());
             } else {
                 player.sendMessage(PREFIX + "招待がありません");
             }
@@ -202,11 +232,11 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /co-check-o [player] - 他プレイヤーの招待を確認
+     * /community check <player> - 他プレイヤーの招待を確認
      */
     private boolean handleCheckOther(CommandSender sender, String[] args) {
         if (args.length < 1) {
-            sender.sendMessage(ChatColor.RED + "使用方法: /co-check-o <プレイヤー名>");
+            sender.sendMessage(ChatColor.RED + "使用方法: /community check <プレイヤー名>");
             return true;
         }
 
@@ -232,7 +262,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /co-accept <communityId> - 招待を受け入れる
+     * /community accept <communityId> - 招待を受け入れる
      */
     private boolean handleAccept(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -241,7 +271,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 1) {
-            sender.sendMessage(ChatColor.RED + "使用方法: /co-accept <コミュニティID>");
+            sender.sendMessage(ChatColor.RED + "使用方法: /community accept <コミュニティID>");
             return true;
         }
 
@@ -282,7 +312,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /co-deny <communityId> - 招待を拒否
+     * /community deny <communityId> - 招待を拒否
      */
     private boolean handleDeny(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -291,7 +321,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 1) {
-            sender.sendMessage(ChatColor.RED + "使用方法: /co-deny <コミュニティID>");
+            sender.sendMessage(ChatColor.RED + "使用方法: /community deny <コミュニティID>");
             return true;
         }
 
@@ -318,7 +348,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /co-leave <communityId> - コミュニティから脱退
+     * /community leave <communityId> - コミュニティから脱退
      */
     private boolean handleLeave(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -327,7 +357,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 1) {
-            sender.sendMessage(ChatColor.RED + "使用方法: /co-leave <コミュニティID>");
+            sender.sendMessage(ChatColor.RED + "使用方法: /community leave <コミュニティID>");
             return true;
         }
 
