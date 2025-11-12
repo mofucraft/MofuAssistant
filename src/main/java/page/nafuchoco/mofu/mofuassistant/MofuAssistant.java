@@ -29,6 +29,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import page.nafuchoco.mofu.mofuassistant.community.*;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
 import page.nafuchoco.mofu.mofuassistant.database.MofuAssistantTable;
 import page.nafuchoco.mofu.mofuassistant.event.PlayerPeacefulModeChangeEvent;
@@ -54,6 +56,10 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     private MofuAssistantConfig config;
     private DatabaseConnector connector;
     private MofuAssistantTable mofuAssistantTable;
+    private CommunityDistributionTable communityDistributionTable;
+    private CommunityDistributionManager communityManager;
+    private CommunityItemStorage communityItemStorage;
+    private DistributionGUI distributionGUI;
 
     @Override
     public void onEnable() {
@@ -78,13 +84,32 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
             getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the database table.", e);
         }
 
+        // コミュニティアイテム配布システムの初期化
+        communityDistributionTable = new CommunityDistributionTable("community_distribution", connector);
+        try {
+            communityDistributionTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community distribution table.", e);
+        }
+
+        communityManager = new CommunityDistributionManager(this);
+        communityItemStorage = new CommunityItemStorage(this);
+        distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable);
+
+        // コマンドの登録
+        getCommand("osusowaken").setExecutor(new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI));
+        getCommand("osusowaken").setTabCompleter(new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI));
+
         getServer().getPluginManager().registerEvents(new PeacefulModeEventListener(), this);
+        getServer().getPluginManager().registerEvents(distributionGUI, this);
         getServer().getPluginManager().registerEvents(this, this);
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+        if (distributionGUI != null)
+            distributionGUI.cleanup();
         if (connector != null)
             connector.close();
     }
@@ -176,5 +201,17 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
 
     public MofuAssistantTable getMofuAssistantTable() {
         return mofuAssistantTable;
+    }
+
+    public CommunityDistributionTable getCommunityDistributionTable() {
+        return communityDistributionTable;
+    }
+
+    public CommunityDistributionManager getCommunityManager() {
+        return communityManager;
+    }
+
+    public CommunityItemStorage getCommunityItemStorage() {
+        return communityItemStorage;
     }
 }
