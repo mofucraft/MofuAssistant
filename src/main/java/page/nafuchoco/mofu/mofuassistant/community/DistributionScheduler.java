@@ -124,7 +124,7 @@ public class DistributionScheduler {
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.broadcastMessage(ChatColor.GREEN + "[配布システム] 新しい配布サイクルが開始されました。");
+            Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 新しい配布サイクルが開始されました。");
             Bukkit.broadcastMessage(ChatColor.YELLOW + "開始時刻: " + newCycle.getFormattedStartTime());
             Bukkit.broadcastMessage(ChatColor.YELLOW + "終了時刻: " + newCycle.getFormattedEndTime());
         });
@@ -169,9 +169,9 @@ public class DistributionScheduler {
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.broadcastMessage(ChatColor.RED + "[配布システム] 前回の配布期間が終了しました。");
+            Bukkit.broadcastMessage(ChatColor.RED + "[おすそわ券配布] 前回の配布期間が終了しました。");
             Bukkit.broadcastMessage(ChatColor.RED + "未回収のアイテムは破棄されました。");
-            Bukkit.broadcastMessage(ChatColor.GREEN + "[配布システム] 新しい配布サイクルが開始されました。");
+            Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 新しい配布サイクルが開始されました。");
             Bukkit.broadcastMessage(ChatColor.YELLOW + "次の配布期間: " + newCycle.getFormattedStartTime() + " ～ " + newCycle.getFormattedEndTime());
         });
     }
@@ -212,7 +212,7 @@ public class DistributionScheduler {
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.broadcastMessage(ChatColor.GREEN + "[配布システム] 手動配布が開始されました。");
+            Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 手動配布が開始されました。");
             Bukkit.broadcastMessage(ChatColor.YELLOW + "配布期間: " + newCycle.getFormattedStartTime() + " ～ " + newCycle.getFormattedEndTime());
         });
     }
@@ -240,7 +240,7 @@ public class DistributionScheduler {
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.broadcastMessage(ChatColor.RED + "[配布システム] 配布期間が終了しました。");
+            Bukkit.broadcastMessage(ChatColor.RED + "[おすそわ券配布] 配布期間が終了しました。");
             Bukkit.broadcastMessage(ChatColor.RED + "未回収のアイテムは破棄されました。");
         });
     }
