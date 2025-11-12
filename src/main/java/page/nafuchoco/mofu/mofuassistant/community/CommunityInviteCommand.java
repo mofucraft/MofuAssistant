@@ -91,6 +91,8 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
                 return handleLeave(sender, subArgs);
             case "who":
                 return handleWho(sender, subArgs);
+            case "list":
+                return handleList(sender, subArgs);
             case "help":
                 return showHelp(sender);
             default:
@@ -104,6 +106,7 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
      */
     private boolean showHelp(CommandSender sender) {
         sender.sendMessage(ChatColor.GREEN + "=== Community コマンドヘルプ ===");
+        sender.sendMessage(ChatColor.YELLOW + "/community list " + ChatColor.GRAY + "- 全コミュニティのリストを表示");
         sender.sendMessage(ChatColor.YELLOW + "/community invite <player> <communityId> " + ChatColor.GRAY + "- プレイヤーを招待");
         sender.sendMessage(ChatColor.YELLOW + "/community cancel <player> <communityId> " + ChatColor.GRAY + "- 招待をキャンセル");
         sender.sendMessage(ChatColor.YELLOW + "/community check " + ChatColor.GRAY + "- 自分の招待を確認");
@@ -397,6 +400,50 @@ public class CommunityInviteCommand implements CommandExecutor, TabCompleter {
         String command = "lp group " + communityName + " listmembers " + page;
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
 
+        return true;
+    }
+
+    /**
+     * /community list - 全コミュニティのリストを表示
+     * community.[コミュニティ名]パーミッションを持つグループを検出
+     */
+    private boolean handleList(CommandSender sender, String[] args) {
+        sender.sendMessage(ChatColor.GREEN + "=== コミュニティ一覧 ===");
+
+        // 全てのグループからcommunity.*パーミッションを持つグループを検索
+        List<String> communities = new ArrayList<>();
+        for (net.luckperms.api.model.group.Group group : luckPerms.getGroupManager().getLoadedGroups()) {
+            String groupName = group.getName();
+            String expectedPermission = "community." + groupName;
+
+            // グループがcommunity.[グループ名]パーミッションを持っているかチェック
+            boolean hasCommunityPermission = group.getCachedData()
+                    .getPermissionData()
+                    .checkPermission(expectedPermission)
+                    .asBoolean();
+
+            if (hasCommunityPermission) {
+                communities.add(groupName);
+            }
+        }
+
+        if (communities.isEmpty()) {
+            sender.sendMessage(ChatColor.GRAY + "コミュニティが見つかりませんでした。");
+            return true;
+        }
+
+        // コミュニティをアルファベット順にソート
+        communities.sort(String::compareToIgnoreCase);
+
+        // 各コミュニティを表示（表示名を使用）
+        for (String communityName : communities) {
+            String displayName = manager.getDisplayName(communityName);
+            int memberCount = manager.getCommunityMemberCount(communityName);
+            sender.sendMessage(ChatColor.YELLOW + "- " + displayName +
+                    ChatColor.GRAY + " (ID: " + communityName + ", メンバー: " + memberCount + "人)");
+        }
+
+        sender.sendMessage(ChatColor.GREEN + "合計: " + communities.size() + "コミュニティ");
         return true;
     }
 

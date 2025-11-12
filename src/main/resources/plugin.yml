@@ -21,7 +21,7 @@ commands:
 
   community:
     description: Community management system.
-    usage: /community <invite|cancel|check|accept|deny|leave|who> [args...]
+    usage: /community <list|invite|cancel|check|accept|deny|leave|who> [args...]
     aliases: [co]
 
 permissions:
