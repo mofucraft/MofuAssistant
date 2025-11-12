@@ -173,4 +173,34 @@ public class CommunityDistributionManager {
     public boolean isPlayerInCommunity(Player player, String communityName) {
         return getPlayerCommunities(player).contains(communityName);
     }
+
+    /**
+     * コミュニティの表示名を取得
+     * displayname.[名前]パーミッションがあればそれを優先、なければグループ名を返す
+     * @param groupName グループの内部ID
+     * @return 表示名
+     */
+    public String getDisplayName(String groupName) {
+        if (!isLuckPermsAvailable()) {
+            return groupName;
+        }
+
+        Group group = luckPerms.getGroupManager().getGroup(groupName);
+        if (group == null) {
+            return groupName;
+        }
+
+        // displayname.* パーミッションを検索
+        String displayNamePrefix = "displayname.";
+        for (var node : group.getNodes()) {
+            String permission = node.getKey();
+            if (permission.startsWith(displayNamePrefix)) {
+                // displayname.[名前] の [名前] 部分を取得
+                return permission.substring(displayNamePrefix.length());
+            }
+        }
+
+        // displayname パーミッションがない場合はグループ名をそのまま返す
+        return groupName;
+    }
 }

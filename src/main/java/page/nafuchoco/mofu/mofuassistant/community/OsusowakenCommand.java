@@ -177,9 +177,10 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
         // 全てのコミュニティ情報を表示
         player.sendMessage(ChatColor.GREEN + "=== あなたのコミュニティ情報 ===");
         for (String communityName : communities) {
+            String displayName = manager.getDisplayName(communityName);
             int memberCount = manager.getCommunityMemberCount(communityName);
             int distributionAmount = manager.calculateDistributionAmount(memberCount);
-            player.sendMessage(ChatColor.YELLOW + communityName + ChatColor.GRAY + ": " +
+            player.sendMessage(ChatColor.YELLOW + displayName + ChatColor.GRAY + ": " +
                               memberCount + "人 → " + distributionAmount + "個");
         }
 
@@ -190,10 +191,11 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
      * 特定コミュニティの詳細情報を表示
      */
     private void showCommunityInfo(Player player, String communityName) {
+        String displayName = manager.getDisplayName(communityName);
         int memberCount = manager.getCommunityMemberCount(communityName);
         int distributionAmount = manager.calculateDistributionAmount(memberCount);
 
-        player.sendMessage(ChatColor.GREEN + "=== " + communityName + " ===");
+        player.sendMessage(ChatColor.GREEN + "=== " + displayName + " ===");
         player.sendMessage(ChatColor.GRAY + "メンバー数: " + ChatColor.WHITE + memberCount + "人");
         player.sendMessage(ChatColor.GRAY + "配布数: " + ChatColor.WHITE + distributionAmount + "個");
 

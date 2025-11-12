@@ -105,12 +105,13 @@ public class DistributionGUI implements Listener {
 
         for (int i = 0; i < communities.size() && i < 54; i++) {
             String communityName = communities.get(i);
+            String displayName = manager.getDisplayName(communityName);
             int memberCount = manager.getCommunityMemberCount(communityName);
             int distributionAmount = manager.calculateDistributionAmount(memberCount);
 
             ItemStack item = new ItemStack(Material.CHEST);
             ItemMeta meta = item.getItemMeta();
-            meta.setDisplayName(ChatColor.GREEN + communityName);
+            meta.setDisplayName(ChatColor.GREEN + displayName);
 
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.GRAY + "メンバー数: " + ChatColor.WHITE + memberCount + "人");
@@ -171,8 +172,9 @@ public class DistributionGUI implements Listener {
         }
 
         int memberCount = manager.getCommunityMemberCount(communityName);
+        String displayName = manager.getDisplayName(communityName);
 
-        Inventory inv = Bukkit.createInventory(null, 27, GUI_TITLE + " - " + communityName);
+        Inventory inv = Bukkit.createInventory(null, 27, GUI_TITLE + " - " + displayName);
 
         // 配布アイテムを表示
         ItemStack displayItem = distributionItem.clone();
@@ -181,7 +183,7 @@ public class DistributionGUI implements Listener {
 
         List<String> lore = meta != null && meta.hasLore() ? meta.getLore() : new ArrayList<>();
         lore.add("");
-        lore.add(ChatColor.GRAY + "コミュニティ: " + ChatColor.WHITE + communityName);
+        lore.add(ChatColor.GRAY + "コミュニティ: " + ChatColor.WHITE + displayName);
         lore.add(ChatColor.GRAY + "メンバー数: " + ChatColor.WHITE + memberCount + "人");
         lore.add(ChatColor.GRAY + "総配布数: " + ChatColor.WHITE + totalAmount + "個");
         lore.add(ChatColor.GRAY + "残り: " + ChatColor.AQUA + remainingAmount + "個");
@@ -247,9 +249,11 @@ public class DistributionGUI implements Listener {
 
         // コミュニティ選択GUI
         if (title.equals(GUI_TITLE + " - 選択")) {
-            ItemMeta meta = clicked.getItemMeta();
-            if (meta != null && meta.hasDisplayName()) {
-                String communityName = ChatColor.stripColor(meta.getDisplayName());
+            // クリックされたスロット番号から内部IDを取得
+            int slot = event.getSlot();
+            List<String> communities = manager.getPlayerCommunities(player);
+            if (slot >= 0 && slot < communities.size()) {
+                String communityName = communities.get(slot);
                 player.closeInventory();
                 openDistributionGUI(player, communityName);
             }
@@ -410,7 +414,8 @@ public class DistributionGUI implements Listener {
             plugin.getLogger().log(Level.WARNING, "残量の取得に失敗しました。", e);
         }
 
-        player.sendMessage(ChatColor.GREEN + "コミュニティ「" + communityName + "」から " +
+        String displayName = manager.getDisplayName(communityName);
+        player.sendMessage(ChatColor.GREEN + "コミュニティ「" + displayName + "」から " +
                           actualClaimAmount + "個のアイテムを受け取りました。");
         player.sendMessage(ChatColor.GRAY + "プールの残り: " + newRemaining + "個");
         player.closeInventory();

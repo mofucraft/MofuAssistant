@@ -114,12 +114,12 @@ public class DistributionScheduler {
         // 全コミュニティのプールを初期化
         Map<String, Integer> distributions = initializePools(cycleId);
 
-        // Discord通知を送信
+        // Discord通知を送信（表示名に変換）
         webhookNotifier.sendDistributionStartNotification(
                 "定期配布",
                 newCycle.getFormattedStartTime(),
                 newCycle.getFormattedEndTime(),
-                distributions
+                convertToDisplayNames(distributions)
         );
 
         // オンラインプレイヤーに通知
@@ -159,12 +159,12 @@ public class DistributionScheduler {
 
         plugin.getLogger().log(Level.INFO, "配布サイクルを更新しました。新しいサイクルID: " + cycleId);
 
-        // Discord通知を送信
+        // Discord通知を送信（表示名に変換）
         webhookNotifier.sendDistributionStartNotification(
                 "定期配布",
                 newCycle.getFormattedStartTime(),
                 newCycle.getFormattedEndTime(),
-                distributions
+                convertToDisplayNames(distributions)
         );
 
         // オンラインプレイヤーに通知
@@ -202,12 +202,12 @@ public class DistributionScheduler {
 
         plugin.getLogger().log(Level.INFO, "手動で配布サイクルを開始しました。サイクルID: " + cycleId);
 
-        // Discord通知を送信
+        // Discord通知を送信（表示名に変換）
         webhookNotifier.sendDistributionStartNotification(
                 "手動配布",
                 newCycle.getFormattedStartTime(),
                 newCycle.getFormattedEndTime(),
-                distributions
+                convertToDisplayNames(distributions)
         );
 
         // オンラインプレイヤーに通知
@@ -284,5 +284,17 @@ public class DistributionScheduler {
         }
 
         return nextSaturday;
+    }
+
+    /**
+     * 内部IDから表示名へのマップに変換
+     */
+    private Map<String, Integer> convertToDisplayNames(Map<String, Integer> distributions) {
+        Map<String, Integer> result = new HashMap<>();
+        for (Map.Entry<String, Integer> entry : distributions.entrySet()) {
+            String displayName = communityManager.getDisplayName(entry.getKey());
+            result.put(displayName, entry.getValue());
+        }
+        return result;
     }
 }
