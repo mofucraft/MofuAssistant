@@ -29,17 +29,44 @@ public class DistributionCycleTable extends DatabaseTable {
     }
 
     public void createTable() throws SQLException {
-        try (Connection connection = getConnector().getConnection();
-             PreparedStatement ps = connection.prepareStatement(
-                     "CREATE TABLE IF NOT EXISTS " + getTablename() + " (" +
-                             "cycle_id INT AUTO_INCREMENT PRIMARY KEY, " +
-                             "start_time TIMESTAMP NOT NULL, " +
-                             "end_time TIMESTAMP NOT NULL, " +
-                             "active BOOLEAN DEFAULT TRUE, " +
-                             "INDEX idx_active (active), " +
-                             "INDEX idx_times (start_time, end_time)" +
-                             ")")) {
-            ps.execute();
+        boolean isSQLite = getConnector().isSQLite();
+
+        try (Connection connection = getConnector().getConnection()) {
+            // テーブル作成
+            String createTableSQL;
+            if (isSQLite) {
+                createTableSQL = "CREATE TABLE IF NOT EXISTS " + getTablename() + " (" +
+                        "cycle_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        "start_time TIMESTAMP NOT NULL, " +
+                        "end_time TIMESTAMP NOT NULL, " +
+                        "active BOOLEAN DEFAULT 1" +
+                        ")";
+            } else {
+                createTableSQL = "CREATE TABLE IF NOT EXISTS " + getTablename() + " (" +
+                        "cycle_id INT AUTO_INCREMENT PRIMARY KEY, " +
+                        "start_time TIMESTAMP NOT NULL, " +
+                        "end_time TIMESTAMP NOT NULL, " +
+                        "active BOOLEAN DEFAULT TRUE, " +
+                        "INDEX idx_active (active), " +
+                        "INDEX idx_times (start_time, end_time)" +
+                        ")";
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(createTableSQL)) {
+                ps.execute();
+            }
+
+            // SQLiteの場合はインデックスを別途作成
+            if (isSQLite) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "CREATE INDEX IF NOT EXISTS idx_active ON " + getTablename() + " (active)")) {
+                    ps.execute();
+                }
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "CREATE INDEX IF NOT EXISTS idx_times ON " + getTablename() + " (start_time, end_time)")) {
+                    ps.execute();
+                }
+            }
         }
     }
 

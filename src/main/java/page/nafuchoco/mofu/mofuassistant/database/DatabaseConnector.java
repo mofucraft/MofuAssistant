@@ -26,13 +26,25 @@ import java.sql.SQLException;
 public class DatabaseConnector {
     private final HikariDataSource dataSource;
     private final String prefix;
+    private final DatabaseType databaseType;
 
     public DatabaseConnector(DatabaseType databaseType, String address, String database, String username, String password, String prefix) {
+        this.databaseType = databaseType;
         val hconfig = new HikariConfig();
         hconfig.setDriverClassName(databaseType.getJdbcClass());
-        hconfig.setJdbcUrl(databaseType.getAddressPrefix() + address + "/" + database);
-        hconfig.addDataSourceProperty("user", username);
-        hconfig.addDataSourceProperty("password", password);
+
+        if (databaseType == DatabaseType.SQLITE) {
+            // SQLiteの場合はファイルパスを使用
+            hconfig.setJdbcUrl(databaseType.getAddressPrefix() + database);
+            // SQLiteはユーザー名・パスワード不要
+            hconfig.setMaximumPoolSize(1); // SQLiteは単一接続推奨
+        } else {
+            // MySQL/MariaDBの場合
+            hconfig.setJdbcUrl(databaseType.getAddressPrefix() + address + "/" + database);
+            hconfig.addDataSourceProperty("user", username);
+            hconfig.addDataSourceProperty("password", password);
+        }
+
         dataSource = new HikariDataSource(hconfig);
         this.prefix = prefix;
     }
@@ -49,8 +61,17 @@ public class DatabaseConnector {
         return prefix;
     }
 
+    public DatabaseType getDatabaseType() {
+        return databaseType;
+    }
+
+    public boolean isSQLite() {
+        return databaseType == DatabaseType.SQLITE;
+    }
+
 
     public enum DatabaseType {
+        SQLITE("org.sqlite.JDBC", "jdbc:sqlite:"),
         MARIADB("org.mariadb.jdbc.Driver", "jdbc:mariadb://"),
         MYSQL("com.mysql.jdbc.Driver", "jdbc:mysql://");
 

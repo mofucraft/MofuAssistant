@@ -8,12 +8,12 @@
 initialization:
   #This is an SQL setting to store data for this plugin.
   database:
-    type: MARIADB # MYSQL or MARIADB
-    address: localhost
-    port: 3306
-    database: mofuassistant
-    username: mofuassistant
-    password: MoFuAsSiStAnT
+    type: SQLITE # SQLITE, MYSQL or MARIADB
+    address: localhost # MySQLまたはMariaDBを使用する場合のみ必要
+    port: 3306 # MySQLまたはMariaDBを使用する場合のみ必要
+    database: plugins/MofuAssistant/database.db # SQLiteの場合はファイルパス、MySQL/MariaDBの場合はデータベース名
+    username: mofuassistant # MySQLまたはMariaDBを使用する場合のみ必要
+    password: MoFuAsSiStAnT # MySQLまたはMariaDBを使用する場合のみ必要
     tablePrefix: ma_
 
 
@@ -26,13 +26,15 @@ peacefulMode:
 
 
 # Assists in the migration of player data.
+# SQLiteを使用している場合は、マイグレーション元のデータベースがMySQL/MariaDBでも動作します
 dataMigrationSupport:
-  - type: MARIADB # MYSQL or MARIADB
-    address: localhost
-    port: 3306
-    database: mofuassistant
-    username: mofuassistant
-    password: MoFuAsSiStAnT
+  # 例: LWCのデータをマイグレーション
+  - type: MARIADB # SQLITE, MYSQL or MARIADB
+    address: localhost # SQLiteの場合は不要
+    port: 3306 # SQLiteの場合は不要
+    database: mofuassistant # SQLiteの場合はファイルパス
+    username: mofuassistant # SQLiteの場合は不要
+    password: MoFuAsSiStAnT # SQLiteの場合は不要
     targetTable:
       - name: lwc_history
         columns:
@@ -41,12 +43,13 @@ dataMigrationSupport:
         columns:
           - owner
 
-  - type: MARIADB # MYSQL or MARIADB
-    address: localhost
-    port: 3306
-    database: mofuassistant
-    username: mofuassistant
-    password: MoFuAsSiStAnT
+  # 例: McMMOのデータをマイグレーション
+  - type: MARIADB # SQLITE, MYSQL or MARIADB
+    address: localhost # SQLiteの場合は不要
+    port: 3306 # SQLiteの場合は不要
+    database: mofuassistant # SQLiteの場合はファイルパス
+    username: mofuassistant # SQLiteの場合は不要
+    password: MoFuAsSiStAnT # SQLiteの場合は不要
     targetTable:
       - name: mcmmo_users
         columns:

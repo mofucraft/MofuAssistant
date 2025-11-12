@@ -33,7 +33,9 @@ public class MofuAssistantTable extends DatabaseTable {
     }
 
     public void createTable() throws SQLException {
-        super.createTable("id VARCHAR(36) PRIMARY KEY, playername VARCHAR(16), player_data LONGTEXT");
+        // SQLiteの場合はTEXT、MySQL/MariaDBの場合はLONGTEXTを使用
+        String dataType = getConnector().isSQLite() ? "TEXT" : "LONGTEXT";
+        super.createTable("id VARCHAR(36) PRIMARY KEY, playername VARCHAR(16), player_data " + dataType);
     }
 
     public void registerPlayer(MofuPlayerData playerData) throws SQLException {

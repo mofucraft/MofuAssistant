@@ -47,19 +47,35 @@ public class CommunityDistributionTable extends DatabaseTable {
      * プレイヤーの配布履歴を記録または更新
      */
     public void updateDistribution(UUID playerId, String communityName, int amount) throws SQLException {
-        try (Connection connection = getConnector().getConnection();
-             PreparedStatement ps = connection.prepareStatement(
-                     "INSERT INTO " + getTablename() + " (player_id, community_name, last_claim_time, claimed_amount) " +
-                             "VALUES (?, ?, ?, ?) " +
-                             "ON DUPLICATE KEY UPDATE last_claim_time = ?, claimed_amount = ?")) {
-            Timestamp now = new Timestamp(System.currentTimeMillis());
-            ps.setString(1, playerId.toString());
-            ps.setString(2, communityName);
-            ps.setTimestamp(3, now);
-            ps.setInt(4, amount);
-            ps.setTimestamp(5, now);
-            ps.setInt(6, amount);
-            ps.executeUpdate();
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+
+        if (getConnector().isSQLite()) {
+            // SQLiteの場合はREPLACE INTOを使用
+            try (Connection connection = getConnector().getConnection();
+                 PreparedStatement ps = connection.prepareStatement(
+                         "REPLACE INTO " + getTablename() + " (player_id, community_name, last_claim_time, claimed_amount) " +
+                                 "VALUES (?, ?, ?, ?)")) {
+                ps.setString(1, playerId.toString());
+                ps.setString(2, communityName);
+                ps.setTimestamp(3, now);
+                ps.setInt(4, amount);
+                ps.executeUpdate();
+            }
+        } else {
+            // MySQL/MariaDBの場合はON DUPLICATE KEY UPDATEを使用
+            try (Connection connection = getConnector().getConnection();
+                 PreparedStatement ps = connection.prepareStatement(
+                         "INSERT INTO " + getTablename() + " (player_id, community_name, last_claim_time, claimed_amount) " +
+                                 "VALUES (?, ?, ?, ?) " +
+                                 "ON DUPLICATE KEY UPDATE last_claim_time = ?, claimed_amount = ?")) {
+                ps.setString(1, playerId.toString());
+                ps.setString(2, communityName);
+                ps.setTimestamp(3, now);
+                ps.setInt(4, amount);
+                ps.setTimestamp(5, now);
+                ps.setInt(6, amount);
+                ps.executeUpdate();
+            }
         }
     }
 
