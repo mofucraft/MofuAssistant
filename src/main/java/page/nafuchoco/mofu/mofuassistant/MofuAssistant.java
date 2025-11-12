@@ -17,6 +17,7 @@
 package page.nafuchoco.mofu.mofuassistant;
 
 import lombok.val;
+import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -27,10 +28,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import page.nafuchoco.mofu.mofuassistant.community.*;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityInviteTable;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
 import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
@@ -61,6 +64,7 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     private CommunityDistributionTable communityDistributionTable;
     private CommunityPoolTable communityPoolTable;
     private DistributionCycleTable distributionCycleTable;
+    private CommunityInviteTable communityInviteTable;
     private CommunityDistributionManager communityManager;
     private CommunityItemStorage communityItemStorage;
     private DistributionGUI distributionGUI;
@@ -115,6 +119,13 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
             getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the distribution cycle table.", e);
         }
 
+        communityInviteTable = new CommunityInviteTable("community_invites", connector);
+        try {
+            communityInviteTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community invite table.", e);
+        }
+
         communityManager = new CommunityDistributionManager(this);
         communityItemStorage = new CommunityItemStorage(this);
         distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable, communityPoolTable, distributionCycleTable);
@@ -127,6 +138,31 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         OsusowakenCommand osusowakenCommand = new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI, distributionScheduler, distributionCycleTable, communityPoolTable);
         getCommand("osusowaken").setExecutor(osusowakenCommand);
         getCommand("osusowaken").setTabCompleter(osusowakenCommand);
+
+        // コミュニティ招待コマンドの登録
+        RegisteredServiceProvider<LuckPerms> provider = Bukkit.getServicesManager().getRegistration(LuckPerms.class);
+        if (provider != null) {
+            LuckPerms luckPerms = provider.getProvider();
+            CommunityInviteCommand inviteCommand = new CommunityInviteCommand(this, communityInviteTable, communityManager, luckPerms);
+            getCommand("co-invite").setExecutor(inviteCommand);
+            getCommand("co-invite").setTabCompleter(inviteCommand);
+            getCommand("co-cancel").setExecutor(inviteCommand);
+            getCommand("co-cancel").setTabCompleter(inviteCommand);
+            getCommand("co-check").setExecutor(inviteCommand);
+            getCommand("co-check").setTabCompleter(inviteCommand);
+            getCommand("co-check-o").setExecutor(inviteCommand);
+            getCommand("co-check-o").setTabCompleter(inviteCommand);
+            getCommand("co-accept").setExecutor(inviteCommand);
+            getCommand("co-accept").setTabCompleter(inviteCommand);
+            getCommand("co-deny").setExecutor(inviteCommand);
+            getCommand("co-deny").setTabCompleter(inviteCommand);
+            getCommand("co-leave").setExecutor(inviteCommand);
+            getCommand("co-leave").setTabCompleter(inviteCommand);
+            getCommand("co-who").setExecutor(inviteCommand);
+            getCommand("co-who").setTabCompleter(inviteCommand);
+        } else {
+            getLogger().log(Level.WARNING, "LuckPerms not found. Community invite commands will not be registered.");
+        }
 
         getServer().getPluginManager().registerEvents(new PeacefulModeEventListener(), this);
         getServer().getPluginManager().registerEvents(distributionGUI, this);

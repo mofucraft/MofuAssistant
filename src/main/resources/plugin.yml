@@ -19,6 +19,37 @@ commands:
   osusowaken:
     description: Community item distribution system.
 
+  co-invite:
+    description: Invite a player to your community.
+    usage: /co-invite <player> <communityId>
+
+  co-cancel:
+    description: Cancel an invite to a player.
+    usage: /co-cancel <player> <communityId>
+
+  co-check:
+    description: Check your pending invites.
+
+  co-check-o:
+    description: Check another player's pending invites.
+    usage: /co-check-o <player>
+
+  co-accept:
+    description: Accept a community invite.
+    usage: /co-accept <communityId>
+
+  co-deny:
+    description: Deny a community invite.
+    usage: /co-deny <communityId>
+
+  co-leave:
+    description: Leave a community.
+    usage: /co-leave <communityId>
+
+  co-who:
+    description: List members of a community.
+    usage: /co-who <communityId> [page]
+
 permissions:
   mofuassistant.assistant:
     description: Allows you to use the assistant command.
