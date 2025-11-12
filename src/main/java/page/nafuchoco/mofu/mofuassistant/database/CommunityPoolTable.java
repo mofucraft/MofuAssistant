@@ -98,13 +98,21 @@ public class CommunityPoolTable extends DatabaseTable {
      * プールから指定数量を減らす（アトミック操作）
      */
     public boolean claimFromPool(int cycleId, String communityName, int amount) throws SQLException {
+        boolean isSQLite = getConnector().isSQLite();
+
         try (Connection connection = getConnector().getConnection()) {
             connection.setAutoCommit(false);
             try {
                 // 現在の残量を確認
                 int currentRemaining;
-                try (PreparedStatement ps = connection.prepareStatement(
-                        "SELECT remaining_amount FROM " + getTablename() + " WHERE cycle_id = ? AND community_name = ? FOR UPDATE")) {
+                String selectSQL = "SELECT remaining_amount FROM " + getTablename() +
+                                  " WHERE cycle_id = ? AND community_name = ?";
+                // MySQLの場合のみFOR UPDATEを追加（SQLiteはトランザクションで自動的にロック）
+                if (!isSQLite) {
+                    selectSQL += " FOR UPDATE";
+                }
+
+                try (PreparedStatement ps = connection.prepareStatement(selectSQL)) {
                     ps.setInt(1, cycleId);
                     ps.setString(2, communityName);
                     try (ResultSet rs = ps.executeQuery()) {
