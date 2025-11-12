@@ -28,8 +28,8 @@ repositories {
 
 dependencies {
     compileOnly 'org.jetbrains:annotations:23.0.0'
-    compileOnly 'org.projectlombok:lombok:1.18.24'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
     compileOnly 'org.spigotmc:spigot-api:1.17-R0.1-SNAPSHOT'
     compileOnly 'net.luckperms:api:5.4'
@@ -38,7 +38,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-core:2.13.3'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
 
-    implementation 'team.aura_dev.lib.slf4j-plugin.spigot:slf4j-plugin-spigot:1.2.0.39:1.7.25'
+    implementation('team.aura_dev.lib.slf4j-plugin.spigot:slf4j-plugin-spigot:1.2.0.39:1.7.25') {
+        exclude group: 'org.spigotmc', module: 'spigot-api'
+    }
     implementation 'com.zaxxer:HikariCP:5.0.1'
     implementation 'mysql:mysql-connector-java:8.0.30'
     implementation 'org.mariadb.jdbc:mariadb-java-client:3.0.6'
@@ -46,6 +48,10 @@ dependencies {
 
 shadowJar {
     archiveFileName.set(rootProject.name + '.' + archiveExtension.get())
+    exclude('org/spigotmc/**')
+    exclude('net/md-5/**')
+    exclude('org/bukkit/**')
+    exclude('net/luckperms/**')
 }
 
 def targetJavaVersion = 16
