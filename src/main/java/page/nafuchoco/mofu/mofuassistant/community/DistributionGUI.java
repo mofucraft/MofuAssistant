@@ -28,6 +28,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistant;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
+import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 
 import java.sql.SQLException;
 import java.util.*;
@@ -42,14 +43,17 @@ public class DistributionGUI implements Listener {
     private final CommunityDistributionManager manager;
     private final CommunityItemStorage storage;
     private final CommunityDistributionTable distributionTable;
+    private final DistributionCycleTable cycleTable;
     private final Map<UUID, String> playerViewingCommunity;
 
     public DistributionGUI(MofuAssistant plugin, CommunityDistributionManager manager,
-                          CommunityItemStorage storage, CommunityDistributionTable distributionTable) {
+                          CommunityItemStorage storage, CommunityDistributionTable distributionTable,
+                          DistributionCycleTable cycleTable) {
         this.plugin = plugin;
         this.manager = manager;
         this.storage = storage;
         this.distributionTable = distributionTable;
+        this.cycleTable = cycleTable;
         this.playerViewingCommunity = new HashMap<>();
     }
 
@@ -57,6 +61,20 @@ public class DistributionGUI implements Listener {
      * プレイヤーにコミュニティ選択GUIを表示
      */
     public void openCommunitySelectionGUI(Player player) {
+        // 配布サイクルのチェック
+        try {
+            DistributionCycle activeCycle = cycleTable.getActiveCycle();
+            if (activeCycle == null || !activeCycle.isCurrentlyValid()) {
+                player.sendMessage(ChatColor.RED + "現在は配布期間外です。");
+                player.sendMessage(ChatColor.YELLOW + "次の配布期間をお待ちください。");
+                return;
+            }
+        } catch (SQLException e) {
+            player.sendMessage(ChatColor.RED + "配布状態の確認中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの確認に失敗しました。", e);
+            return;
+        }
+
         List<String> communities = manager.getPlayerCommunities(player);
 
         if (communities.isEmpty()) {
@@ -192,6 +210,30 @@ public class DistributionGUI implements Listener {
      * プレイヤーにアイテムを配布
      */
     private void giveItemToPlayer(Player player, String communityName) {
+        // 配布サイクルの再確認
+        try {
+            DistributionCycle activeCycle = cycleTable.getActiveCycle();
+            if (activeCycle == null || !activeCycle.isCurrentlyValid()) {
+                player.sendMessage(ChatColor.RED + "配布期間が終了しました。");
+                player.closeInventory();
+                return;
+            }
+
+            // 既に受け取っているかチェック
+            CommunityDistributionData existingData = distributionTable.getDistribution(player.getUniqueId(), communityName);
+            if (existingData != null) {
+                player.sendMessage(ChatColor.RED + "このコミュニティからは既にアイテムを受け取っています。");
+                player.closeInventory();
+                return;
+            }
+
+        } catch (SQLException e) {
+            player.sendMessage(ChatColor.RED + "配布状態の確認中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布状態の確認に失敗しました。", e);
+            player.closeInventory();
+            return;
+        }
+
         ItemStack distributionItem = storage.loadItem();
         if (distributionItem == null) {
             player.sendMessage(ChatColor.RED + "配布するアイテムが設定されていません。");

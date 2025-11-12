@@ -32,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import page.nafuchoco.mofu.mofuassistant.community.*;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
+import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 import page.nafuchoco.mofu.mofuassistant.database.MofuAssistantTable;
 import page.nafuchoco.mofu.mofuassistant.event.PlayerPeacefulModeChangeEvent;
 import page.nafuchoco.mofu.mofuassistant.listener.PeacefulModeEventListener;
@@ -57,9 +58,11 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     private DatabaseConnector connector;
     private MofuAssistantTable mofuAssistantTable;
     private CommunityDistributionTable communityDistributionTable;
+    private DistributionCycleTable distributionCycleTable;
     private CommunityDistributionManager communityManager;
     private CommunityItemStorage communityItemStorage;
     private DistributionGUI distributionGUI;
+    private DistributionScheduler distributionScheduler;
 
     @Override
     public void onEnable() {
@@ -92,13 +95,25 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
             getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community distribution table.", e);
         }
 
+        distributionCycleTable = new DistributionCycleTable("distribution_cycles", connector);
+        try {
+            distributionCycleTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the distribution cycle table.", e);
+        }
+
         communityManager = new CommunityDistributionManager(this);
         communityItemStorage = new CommunityItemStorage(this);
-        distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable);
+        distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable, distributionCycleTable);
+        distributionScheduler = new DistributionScheduler(this, distributionCycleTable);
+
+        // スケジューラーを開始
+        distributionScheduler.start();
 
         // コマンドの登録
-        getCommand("osusowaken").setExecutor(new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI));
-        getCommand("osusowaken").setTabCompleter(new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI));
+        OsusowakenCommand osusowakenCommand = new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI, distributionScheduler, distributionCycleTable);
+        getCommand("osusowaken").setExecutor(osusowakenCommand);
+        getCommand("osusowaken").setTabCompleter(osusowakenCommand);
 
         getServer().getPluginManager().registerEvents(new PeacefulModeEventListener(), this);
         getServer().getPluginManager().registerEvents(distributionGUI, this);
@@ -108,6 +123,8 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+        if (distributionScheduler != null)
+            distributionScheduler.stop();
         if (distributionGUI != null)
             distributionGUI.cleanup();
         if (connector != null)
@@ -207,11 +224,19 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         return communityDistributionTable;
     }
 
+    public DistributionCycleTable getDistributionCycleTable() {
+        return distributionCycleTable;
+    }
+
     public CommunityDistributionManager getCommunityManager() {
         return communityManager;
     }
 
     public CommunityItemStorage getCommunityItemStorage() {
         return communityItemStorage;
+    }
+
+    public DistributionScheduler getDistributionScheduler() {
+        return distributionScheduler;
     }
 }

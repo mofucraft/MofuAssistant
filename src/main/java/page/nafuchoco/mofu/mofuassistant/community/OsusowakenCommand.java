@@ -27,10 +27,13 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistant;
+import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 
 /**
  * /osusowakenコマンドの処理クラス
@@ -40,13 +43,18 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
     private final CommunityDistributionManager manager;
     private final CommunityItemStorage storage;
     private final DistributionGUI gui;
+    private final DistributionScheduler scheduler;
+    private final DistributionCycleTable cycleTable;
 
     public OsusowakenCommand(MofuAssistant plugin, CommunityDistributionManager manager,
-                            CommunityItemStorage storage, DistributionGUI gui) {
+                            CommunityItemStorage storage, DistributionGUI gui,
+                            DistributionScheduler scheduler, DistributionCycleTable cycleTable) {
         this.plugin = plugin;
         this.manager = manager;
         this.storage = storage;
         this.gui = gui;
+        this.scheduler = scheduler;
+        this.cycleTable = cycleTable;
     }
 
     @Override
@@ -81,6 +89,15 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
 
             case "info":
                 return handleInfo(sender, args);
+
+            case "start":
+                return handleStart(sender);
+
+            case "end":
+                return handleEnd(sender);
+
+            case "status":
+                return handleStatus(sender);
 
             case "help":
                 return handleHelp(sender);
@@ -192,18 +209,102 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
+     * /osusowaken start - 手動で配布を開始
+     */
+    private boolean handleStart(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            scheduler.startManualCycle();
+            sender.sendMessage(ChatColor.GREEN + "配布サイクルを手動で開始しました。");
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "配布サイクルの開始中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの開始に失敗しました。", e);
+        }
+
+        return true;
+    }
+
+    /**
+     * /osusowaken end - 手動で配布を終了
+     */
+    private boolean handleEnd(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            scheduler.endManualCycle();
+            sender.sendMessage(ChatColor.GREEN + "配布サイクルを終了しました。未回収のアイテムは破棄されました。");
+        } catch (IllegalStateException e) {
+            sender.sendMessage(ChatColor.RED + e.getMessage());
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "配布サイクルの終了中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの終了に失敗しました。", e);
+        }
+
+        return true;
+    }
+
+    /**
+     * /osusowaken status - 配布状態を表示
+     */
+    private boolean handleStatus(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            DistributionCycle activeCycle = cycleTable.getActiveCycle();
+
+            if (activeCycle == null) {
+                sender.sendMessage(ChatColor.RED + "現在、アクティブな配布サイクルはありません。");
+                return true;
+            }
+
+            sender.sendMessage(ChatColor.GREEN + "=== 配布サイクル状態 ===");
+            sender.sendMessage(ChatColor.GRAY + "サイクルID: " + ChatColor.WHITE + activeCycle.getCycleId());
+            sender.sendMessage(ChatColor.GRAY + "開始時刻: " + ChatColor.WHITE + activeCycle.getStartTime());
+            sender.sendMessage(ChatColor.GRAY + "終了時刻: " + ChatColor.WHITE + activeCycle.getEndTime());
+            sender.sendMessage(ChatColor.GRAY + "ステータス: " +
+                              (activeCycle.isCurrentlyValid() ? ChatColor.GREEN + "有効" : ChatColor.RED + "期限切れ"));
+
+            // アイテム設定状況
+            if (storage.hasItem()) {
+                sender.sendMessage(ChatColor.GRAY + "配布アイテム: " + ChatColor.GREEN + "設定済み");
+            } else {
+                sender.sendMessage(ChatColor.GRAY + "配布アイテム: " + ChatColor.RED + "未設定");
+            }
+
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "配布状態の取得中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布状態の取得に失敗しました。", e);
+        }
+
+        return true;
+    }
+
+    /**
      * /osusowaken help - ヘルプメッセージ
      */
     private boolean handleHelp(CommandSender sender) {
         sender.sendMessage(ChatColor.GREEN + "=== Osusowaken コマンドヘルプ ===");
         sender.sendMessage(ChatColor.YELLOW + "/osusowaken " + ChatColor.GRAY + "- アイテム配布GUIを開く");
         sender.sendMessage(ChatColor.YELLOW + "/osusowaken info [community] " + ChatColor.GRAY + "- コミュニティ情報を表示");
+        sender.sendMessage(ChatColor.YELLOW + "/osusowaken status " + ChatColor.GRAY + "- 配布状態を表示");
         sender.sendMessage(ChatColor.YELLOW + "/osusowaken help " + ChatColor.GRAY + "- このヘルプを表示");
 
         if (sender.hasPermission("mofuassistant.osusowaken.admin")) {
             sender.sendMessage("");
             sender.sendMessage(ChatColor.RED + "管理者コマンド:");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken setitem " + ChatColor.GRAY + "- 手に持つアイテムを配布アイテムに設定");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken start " + ChatColor.GRAY + "- 配布を手動で開始");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken end " + ChatColor.GRAY + "- 配布を手動で終了（未回収破棄）");
         }
 
         return true;
@@ -216,9 +317,11 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> subCommands = new ArrayList<>(Arrays.asList("info", "help"));
+            List<String> subCommands = new ArrayList<>(Arrays.asList("info", "status", "help"));
             if (sender.hasPermission("mofuassistant.osusowaken.admin")) {
                 subCommands.add("setitem");
+                subCommands.add("start");
+                subCommands.add("end");
             }
 
             String input = args[0].toLowerCase();
