@@ -26,7 +26,6 @@ public class CommunityPoolTable extends DatabaseTable {
         super(tablename, connector);
     }
 
-    @Override
     public void createTable() throws SQLException {
         boolean isSQLite = getConnector().isSQLite();
 

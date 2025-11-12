@@ -29,7 +29,6 @@ public class CommunityDistributionTable extends DatabaseTable {
         super(tablename, connector);
     }
 
-    @Override
     public void createTable() throws SQLException {
         try (Connection connection = getConnector().getConnection();
              PreparedStatement ps = connection.prepareStatement(
