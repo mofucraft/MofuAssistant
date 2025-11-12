@@ -17,54 +17,57 @@
 package page.nafuchoco.mofu.mofuassistant.community;
 
 import java.sql.Timestamp;
-import java.util.UUID;
 
 /**
- * コミュニティアイテム配布の受け取り記録を表すデータクラス
+ * コミュニティアイテムプールの情報を表すデータクラス
  */
-public class CommunityDistributionData {
+public class CommunityPool {
     private final int cycleId;
-    private final UUID playerId;
     private final String communityName;
-    private final Timestamp lastClaimTime;
-    private final int claimedAmount;
+    private final int totalAmount;
+    private final int remainingAmount;
+    private final Timestamp lastUpdated;
 
-    public CommunityDistributionData(int cycleId, UUID playerId, String communityName, Timestamp lastClaimTime, int claimedAmount) {
+    public CommunityPool(int cycleId, String communityName, int totalAmount, int remainingAmount, Timestamp lastUpdated) {
         this.cycleId = cycleId;
-        this.playerId = playerId;
         this.communityName = communityName;
-        this.lastClaimTime = lastClaimTime;
-        this.claimedAmount = claimedAmount;
+        this.totalAmount = totalAmount;
+        this.remainingAmount = remainingAmount;
+        this.lastUpdated = lastUpdated;
     }
 
     public int getCycleId() {
         return cycleId;
     }
 
-    public UUID getPlayerId() {
-        return playerId;
-    }
-
     public String getCommunityName() {
         return communityName;
     }
 
-    public Timestamp getLastClaimTime() {
-        return lastClaimTime;
+    public int getTotalAmount() {
+        return totalAmount;
     }
 
-    public int getClaimedAmount() {
-        return claimedAmount;
+    public int getRemainingAmount() {
+        return remainingAmount;
+    }
+
+    public Timestamp getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public boolean hasRemaining() {
+        return remainingAmount > 0;
     }
 
     @Override
     public String toString() {
-        return "CommunityDistributionData{" +
+        return "CommunityPool{" +
                 "cycleId=" + cycleId +
-                ", playerId=" + playerId +
                 ", communityName='" + communityName + '\'' +
-                ", lastClaimTime=" + lastClaimTime +
-                ", claimedAmount=" + claimedAmount +
+                ", totalAmount=" + totalAmount +
+                ", remainingAmount=" + remainingAmount +
+                ", lastUpdated=" + lastUpdated +
                 '}';
     }
 }

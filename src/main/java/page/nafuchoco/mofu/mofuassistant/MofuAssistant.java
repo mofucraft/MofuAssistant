@@ -31,6 +31,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import page.nafuchoco.mofu.mofuassistant.community.*;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
 import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 import page.nafuchoco.mofu.mofuassistant.database.MofuAssistantTable;
@@ -58,6 +59,7 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     private DatabaseConnector connector;
     private MofuAssistantTable mofuAssistantTable;
     private CommunityDistributionTable communityDistributionTable;
+    private CommunityPoolTable communityPoolTable;
     private DistributionCycleTable distributionCycleTable;
     private CommunityDistributionManager communityManager;
     private CommunityItemStorage communityItemStorage;
@@ -95,6 +97,13 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
             getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community distribution table.", e);
         }
 
+        communityPoolTable = new CommunityPoolTable("community_pools", connector);
+        try {
+            communityPoolTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community pool table.", e);
+        }
+
         distributionCycleTable = new DistributionCycleTable("distribution_cycles", connector);
         try {
             distributionCycleTable.createTable();
@@ -104,8 +113,8 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
 
         communityManager = new CommunityDistributionManager(this);
         communityItemStorage = new CommunityItemStorage(this);
-        distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable, distributionCycleTable);
-        distributionScheduler = new DistributionScheduler(this, distributionCycleTable);
+        distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable, communityPoolTable, distributionCycleTable);
+        distributionScheduler = new DistributionScheduler(this, distributionCycleTable, communityPoolTable, communityManager);
 
         // スケジューラーを開始
         distributionScheduler.start();
@@ -222,6 +231,10 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
 
     public CommunityDistributionTable getCommunityDistributionTable() {
         return communityDistributionTable;
+    }
+
+    public CommunityPoolTable getCommunityPoolTable() {
+        return communityPoolTable;
     }
 
     public DistributionCycleTable getDistributionCycleTable() {

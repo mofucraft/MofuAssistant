@@ -20,12 +20,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.scheduler.BukkitTask;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistant;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 
 import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Set;
 import java.util.logging.Level;
 
 /**
@@ -35,11 +37,16 @@ public class DistributionScheduler {
     private static final int CHECK_INTERVAL_MINUTES = 5; // 5分ごとにチェック
     private final MofuAssistant plugin;
     private final DistributionCycleTable cycleTable;
+    private final CommunityPoolTable poolTable;
+    private final CommunityDistributionManager communityManager;
     private BukkitTask schedulerTask;
 
-    public DistributionScheduler(MofuAssistant plugin, DistributionCycleTable cycleTable) {
+    public DistributionScheduler(MofuAssistant plugin, DistributionCycleTable cycleTable,
+                                CommunityPoolTable poolTable, CommunityDistributionManager communityManager) {
         this.plugin = plugin;
         this.cycleTable = cycleTable;
+        this.poolTable = poolTable;
+        this.communityManager = communityManager;
     }
 
     /**
@@ -96,6 +103,9 @@ public class DistributionScheduler {
         int cycleId = cycleTable.createCycle(newCycle);
         plugin.getLogger().log(Level.INFO, "初期配布サイクルを作成しました。ID: " + cycleId);
 
+        // 全コミュニティのプールを初期化
+        initializePools(cycleId);
+
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
             Bukkit.broadcastMessage(ChatColor.GREEN + "[配布システム] 新しい配布サイクルが開始されました。");
@@ -108,6 +118,15 @@ public class DistributionScheduler {
      * 現在のサイクルを終了し、新しいサイクルを開始
      */
     private void endCurrentCycleAndStartNew() throws SQLException {
+        // 現在のサイクルIDを取得
+        DistributionCycle currentCycle = cycleTable.getActiveCycle();
+        int oldCycleId = currentCycle != null ? currentCycle.getCycleId() : -1;
+
+        // 古いプールをクリア
+        if (oldCycleId != -1) {
+            poolTable.clearPoolsForCycle(oldCycleId);
+        }
+
         // 現在のサイクルを無効化
         cycleTable.deactivateAllCycles();
 
@@ -118,6 +137,9 @@ public class DistributionScheduler {
         // 新しいサイクルを作成
         DistributionCycle newCycle = DistributionCycle.createNewCycle();
         int cycleId = cycleTable.createCycle(newCycle);
+
+        // 新しいプールを初期化
+        initializePools(cycleId);
 
         plugin.getLogger().log(Level.INFO, "配布サイクルを更新しました。新しいサイクルID: " + cycleId);
 
@@ -134,6 +156,12 @@ public class DistributionScheduler {
      * 手動で配布サイクルを開始
      */
     public void startManualCycle() throws SQLException {
+        // 古いサイクルのプールをクリア
+        DistributionCycle oldCycle = cycleTable.getActiveCycle();
+        if (oldCycle != null) {
+            poolTable.clearPoolsForCycle(oldCycle.getCycleId());
+        }
+
         // 既存のアクティブなサイクルを無効化
         cycleTable.deactivateAllCycles();
 
@@ -144,6 +172,9 @@ public class DistributionScheduler {
         // 今すぐ開始するサイクルを作成
         DistributionCycle newCycle = DistributionCycle.createImmediateCycle();
         int cycleId = cycleTable.createCycle(newCycle);
+
+        // 新しいプールを初期化
+        initializePools(cycleId);
 
         plugin.getLogger().log(Level.INFO, "手動で配布サイクルを開始しました。サイクルID: " + cycleId);
 
@@ -163,6 +194,9 @@ public class DistributionScheduler {
             throw new IllegalStateException("アクティブな配布サイクルがありません。");
         }
 
+        // プールをクリア
+        poolTable.clearPoolsForCycle(activeCycle.getCycleId());
+
         // 現在のサイクルを無効化
         cycleTable.deactivateAllCycles();
 
@@ -177,6 +211,21 @@ public class DistributionScheduler {
             Bukkit.broadcastMessage(ChatColor.RED + "[配布システム] 配布期間が終了しました。");
             Bukkit.broadcastMessage(ChatColor.RED + "未回収のアイテムは破棄されました。");
         });
+    }
+
+    /**
+     * 全コミュニティのプールを初期化
+     */
+    private void initializePools(int cycleId) throws SQLException {
+        Set<String> communities = communityManager.getAllCommunities();
+
+        for (String communityName : communities) {
+            int memberCount = communityManager.getCommunityMemberCount(communityName);
+            int totalAmount = communityManager.calculateDistributionAmount(memberCount);
+
+            poolTable.createOrResetPool(cycleId, communityName, totalAmount);
+            plugin.getLogger().log(Level.INFO, "コミュニティ「" + communityName + "」のプールを初期化しました。総配布数: " + totalAmount);
+        }
     }
 
     /**
