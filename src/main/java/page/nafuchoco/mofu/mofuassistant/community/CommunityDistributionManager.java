@@ -68,15 +68,10 @@ public class CommunityDistributionManager {
             return Collections.emptyList();
         }
 
-        return user.getNodes().stream()
-                .filter(node -> node.getKey().startsWith(COMMUNITY_GROUP_PREFIX))
-                .map(node -> {
-                    String groupName = node.getKey();
-                    if (groupName.startsWith(COMMUNITY_GROUP_PREFIX)) {
-                        return groupName.substring(COMMUNITY_GROUP_PREFIX.length());
-                    }
-                    return groupName;
-                })
+        // getCachedDataを使用して、グループから継承されたパーミッションも含めて取得
+        return user.getCachedData().getPermissionData().getPermissionMap().keySet().stream()
+                .filter(permission -> permission.startsWith(COMMUNITY_GROUP_PREFIX))
+                .map(permission -> permission.substring(COMMUNITY_GROUP_PREFIX.length()))
                 .collect(Collectors.toList());
     }
 
@@ -88,15 +83,18 @@ public class CommunityDistributionManager {
             return 0;
         }
 
-        String groupName = COMMUNITY_GROUP_PREFIX + communityName;
+        String permissionName = COMMUNITY_GROUP_PREFIX + communityName;
 
         // オンラインプレイヤーの中からこのコミュニティに所属している人数をカウント
         // LuckPerms APIでは全ユーザーを取得するのは重い処理なので、オンラインプレイヤーのみを対象とする
         return (int) Bukkit.getOnlinePlayers().stream()
                 .filter(player -> {
                     User user = luckPerms.getUserManager().getUser(player.getUniqueId());
-                    return user != null && user.getNodes().stream()
-                            .anyMatch(node -> node.getKey().equals(groupName));
+                    if (user == null) {
+                        return false;
+                    }
+                    // グループから継承されたパーミッションも含めてチェック
+                    return user.getCachedData().getPermissionData().checkPermission(permissionName).asBoolean();
                 })
                 .count();
     }
