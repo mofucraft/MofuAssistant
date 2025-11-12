@@ -71,6 +71,21 @@ lp group setsugen permission set osusowaken.enable true
 lp user プレイヤー名 parent add setsugen
 ```
 
+#### コミュニティ表示名のカスタマイズ
+グループ名とは別の表示名を設定できます。表示名は以下の場所で使用されます：
+- 配布GUI
+- `/osusowaken info`コマンド
+- Discord通知
+
+```bash
+# 表示名を設定（グループ名: setsugen → 表示名: 雪原コミュニティ）
+lp group setsugen permission set displayname.雪原コミュニティ true
+
+# displayname.*パーミッションがない場合はグループ名がそのまま表示されます
+```
+
+**注意**: 内部処理（データベース等）では引き続きグループIDが使用されるため、グループ名を変更しても互換性は保たれます。
+
 #### データベース
 - デフォルト: SQLite（`plugins/MofuAssistant/database.db`）
 - 対応: MySQL, MariaDB
@@ -108,7 +123,34 @@ database:
   username: root
   password: password
   tablePrefix: ""
+
+# Discord webhook settings for distribution notifications
+discord:
+  webhookUrl: ""  # Discord Webhook URL（空の場合は通知なし）
+  enableNotifications: true  # Discord通知の有効/無効
 ```
+
+### Discord通知の設定
+
+配布サイクルが開始されたときに、Discordへ自動通知を送信できます。
+
+1. **Discord Webhook URLの取得**
+   - Discordサーバーの設定 → 連携サービス → ウェブフック
+   - 「新しいウェブフック」を作成し、URLをコピー
+
+2. **config.ymlに設定**
+   ```yaml
+   discord:
+     webhookUrl: "https://discord.com/api/webhooks/..."
+     enableNotifications: true
+   ```
+
+3. **通知内容**
+   - 配布サイクルの種類（定期配布/手動配布）
+   - 配布期間（開始時刻・終了時刻）
+   - コミュニティごとの配布個数一覧
+
+**注意**: `webhookUrl`が空の場合、またはプラグイン起動時に設定項目がない場合は、自動的にconfig.ymlに追加されます。
 
 ## 必要環境
 
