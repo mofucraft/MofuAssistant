@@ -70,6 +70,10 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     public void onEnable() {
         // Plugin startup logic
         saveDefaultConfig();
+
+        // 設定ファイルに不足している項目を自動追加
+        ensureConfigDefaults();
+
         config = new MofuAssistantConfig();
         getPluginConfig().reloadConfig();
         if (getPluginConfig().isDebug())
@@ -127,6 +131,32 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new PeacefulModeEventListener(), this);
         getServer().getPluginManager().registerEvents(distributionGUI, this);
         getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    /**
+     * 設定ファイルに不足している項目を自動追加
+     */
+    private void ensureConfigDefaults() {
+        boolean configChanged = false;
+
+        // Discord webhook設定のチェック
+        if (!getConfig().contains("discord.webhookUrl")) {
+            getConfig().set("discord.webhookUrl", "");
+            configChanged = true;
+            getLogger().log(Level.INFO, "Added missing config: discord.webhookUrl");
+        }
+
+        if (!getConfig().contains("discord.enableNotifications")) {
+            getConfig().set("discord.enableNotifications", true);
+            configChanged = true;
+            getLogger().log(Level.INFO, "Added missing config: discord.enableNotifications");
+        }
+
+        // 変更があった場合のみ保存
+        if (configChanged) {
+            saveConfig();
+            getLogger().log(Level.INFO, "Configuration file updated with missing entries.");
+        }
     }
 
     @Override
