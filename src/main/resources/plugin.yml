@@ -4,6 +4,7 @@ main: page.nafuchoco.mofu.mofuassistant.MofuAssistant
 api-version: 1.17
 authors: [ NAFU_at ]
 website: https://github.com/mofucraft
+softdepend: [LuckPerms]
 
 commands:
   peaceful:
@@ -14,6 +15,9 @@ commands:
 
   migrate:
     description: Migrate player data.
+
+  osusowaken:
+    description: Community item distribution system.
 
 permissions:
   mofuassistant.assistant:
@@ -27,3 +31,11 @@ permissions:
   mofuassistant.migrate:
     description: Allows you to migrate player data.
     default: false
+
+  mofuassistant.osusowaken:
+    description: Allows you to use the osusowaken command.
+    default: true
+
+  mofuassistant.osusowaken.admin:
+    description: Allows you to manage the osusowaken system.
+    default: op

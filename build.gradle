@@ -1,11 +1,11 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'page.nafuchoco.mofu'
-version = '0.4.0-Beta.1'
+version = '0.5.0-Beta2'
 
 repositories {
     mavenCentral()
@@ -20,27 +20,39 @@ repositories {
     maven {
         url = 'https://maven.aura-dev.team/repository/auradev-releases/'
     }
+    maven {
+        name = 'luckperms-repo'
+        url = 'https://repo.lucko.me/'
+    }
 }
 
 dependencies {
     compileOnly 'org.jetbrains:annotations:23.0.0'
-    compileOnly 'org.projectlombok:lombok:1.18.24'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
     compileOnly 'org.spigotmc:spigot-api:1.17-R0.1-SNAPSHOT'
+    compileOnly 'net.luckperms:api:5.4'
 
     implementation 'com.google.code.gson:gson:2.9.0'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.13.3'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
 
-    implementation 'team.aura_dev.lib.slf4j-plugin.spigot:slf4j-plugin-spigot:1.2.0.39:1.7.25'
+    implementation('team.aura_dev.lib.slf4j-plugin.spigot:slf4j-plugin-spigot:1.2.0.39:1.7.25') {
+        exclude group: 'org.spigotmc', module: 'spigot-api'
+    }
     implementation 'com.zaxxer:HikariCP:5.0.1'
     implementation 'mysql:mysql-connector-java:8.0.30'
     implementation 'org.mariadb.jdbc:mariadb-java-client:3.0.6'
+    implementation 'org.xerial:sqlite-jdbc:3.42.0.0'
 }
 
 shadowJar {
     archiveFileName.set(rootProject.name + '.' + archiveExtension.get())
+    exclude('org/spigotmc/**')
+    exclude('net/md-5/**')
+    exclude('org/bukkit/**')
+    exclude('net/luckperms/**')
 }
 
 def targetJavaVersion = 16

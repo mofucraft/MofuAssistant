@@ -29,7 +29,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import page.nafuchoco.mofu.mofuassistant.community.*;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
+import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 import page.nafuchoco.mofu.mofuassistant.database.MofuAssistantTable;
 import page.nafuchoco.mofu.mofuassistant.event.PlayerPeacefulModeChangeEvent;
 import page.nafuchoco.mofu.mofuassistant.listener.PeacefulModeEventListener;
@@ -54,11 +58,22 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     private MofuAssistantConfig config;
     private DatabaseConnector connector;
     private MofuAssistantTable mofuAssistantTable;
+    private CommunityDistributionTable communityDistributionTable;
+    private CommunityPoolTable communityPoolTable;
+    private DistributionCycleTable distributionCycleTable;
+    private CommunityDistributionManager communityManager;
+    private CommunityItemStorage communityItemStorage;
+    private DistributionGUI distributionGUI;
+    private DistributionScheduler distributionScheduler;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
         saveDefaultConfig();
+
+        // 設定ファイルに不足している項目を自動追加
+        ensureConfigDefaults();
+
         config = new MofuAssistantConfig();
         getPluginConfig().reloadConfig();
         if (getPluginConfig().isDebug())
@@ -78,13 +93,79 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
             getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the database table.", e);
         }
 
+        // コミュニティアイテム配布システムの初期化
+        communityDistributionTable = new CommunityDistributionTable("community_distribution", connector);
+        try {
+            communityDistributionTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community distribution table.", e);
+        }
+
+        communityPoolTable = new CommunityPoolTable("community_pools", connector);
+        try {
+            communityPoolTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community pool table.", e);
+        }
+
+        distributionCycleTable = new DistributionCycleTable("distribution_cycles", connector);
+        try {
+            distributionCycleTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the distribution cycle table.", e);
+        }
+
+        communityManager = new CommunityDistributionManager(this);
+        communityItemStorage = new CommunityItemStorage(this);
+        distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable, communityPoolTable, distributionCycleTable);
+        distributionScheduler = new DistributionScheduler(this, distributionCycleTable, communityPoolTable, communityManager);
+
+        // スケジューラーを開始
+        distributionScheduler.start();
+
+        // コマンドの登録
+        OsusowakenCommand osusowakenCommand = new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI, distributionScheduler, distributionCycleTable);
+        getCommand("osusowaken").setExecutor(osusowakenCommand);
+        getCommand("osusowaken").setTabCompleter(osusowakenCommand);
+
         getServer().getPluginManager().registerEvents(new PeacefulModeEventListener(), this);
+        getServer().getPluginManager().registerEvents(distributionGUI, this);
         getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    /**
+     * 設定ファイルに不足している項目を自動追加
+     */
+    private void ensureConfigDefaults() {
+        boolean configChanged = false;
+
+        // Discord webhook設定のチェック
+        if (!getConfig().contains("discord.webhookUrl")) {
+            getConfig().set("discord.webhookUrl", "");
+            configChanged = true;
+            getLogger().log(Level.INFO, "Added missing config: discord.webhookUrl");
+        }
+
+        if (!getConfig().contains("discord.enableNotifications")) {
+            getConfig().set("discord.enableNotifications", true);
+            configChanged = true;
+            getLogger().log(Level.INFO, "Added missing config: discord.enableNotifications");
+        }
+
+        // 変更があった場合のみ保存
+        if (configChanged) {
+            saveConfig();
+            getLogger().log(Level.INFO, "Configuration file updated with missing entries.");
+        }
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+        if (distributionScheduler != null)
+            distributionScheduler.stop();
+        if (distributionGUI != null)
+            distributionGUI.cleanup();
         if (connector != null)
             connector.close();
     }
@@ -176,5 +257,29 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
 
     public MofuAssistantTable getMofuAssistantTable() {
         return mofuAssistantTable;
+    }
+
+    public CommunityDistributionTable getCommunityDistributionTable() {
+        return communityDistributionTable;
+    }
+
+    public CommunityPoolTable getCommunityPoolTable() {
+        return communityPoolTable;
+    }
+
+    public DistributionCycleTable getDistributionCycleTable() {
+        return distributionCycleTable;
+    }
+
+    public CommunityDistributionManager getCommunityManager() {
+        return communityManager;
+    }
+
+    public CommunityItemStorage getCommunityItemStorage() {
+        return communityItemStorage;
+    }
+
+    public DistributionScheduler getDistributionScheduler() {
+        return distributionScheduler;
     }
 }
