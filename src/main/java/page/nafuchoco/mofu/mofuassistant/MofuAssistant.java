@@ -124,7 +124,7 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         distributionScheduler.start();
 
         // コマンドの登録
-        OsusowakenCommand osusowakenCommand = new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI, distributionScheduler, distributionCycleTable);
+        OsusowakenCommand osusowakenCommand = new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI, distributionScheduler, distributionCycleTable, communityPoolTable);
         getCommand("osusowaken").setExecutor(osusowakenCommand);
         getCommand("osusowaken").setTabCompleter(osusowakenCommand);
 

@@ -27,12 +27,11 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistant;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 
 /**
@@ -45,16 +44,19 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
     private final DistributionGUI gui;
     private final DistributionScheduler scheduler;
     private final DistributionCycleTable cycleTable;
+    private final CommunityPoolTable poolTable;
 
     public OsusowakenCommand(MofuAssistant plugin, CommunityDistributionManager manager,
                             CommunityItemStorage storage, DistributionGUI gui,
-                            DistributionScheduler scheduler, DistributionCycleTable cycleTable) {
+                            DistributionScheduler scheduler, DistributionCycleTable cycleTable,
+                            CommunityPoolTable poolTable) {
         this.plugin = plugin;
         this.manager = manager;
         this.storage = storage;
         this.gui = gui;
         this.scheduler = scheduler;
         this.cycleTable = cycleTable;
+        this.poolTable = poolTable;
     }
 
     @Override
@@ -98,6 +100,9 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
 
             case "status":
                 return handleStatus(sender);
+
+            case "pools":
+                return handlePools(sender);
 
             case "help":
                 return handleHelp(sender);
@@ -307,6 +312,77 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken setitem " + ChatColor.GRAY + "- 手に持つアイテムを配布アイテムに設定");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken start " + ChatColor.GRAY + "- 配布を手動で開始");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken end " + ChatColor.GRAY + "- 配布を手動で終了（未回収破棄）");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken pools " + ChatColor.GRAY + "- 全コミュニティのプール情報を表示");
+        }
+
+        return true;
+    }
+
+    /**
+     * /osusowaken pools - 全コミュニティのプール情報を表示（管理者用）
+     */
+    private boolean handlePools(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            DistributionCycle activeCycle = cycleTable.getActiveCycle();
+
+            if (activeCycle == null) {
+                sender.sendMessage(ChatColor.RED + "現在、アクティブな配布サイクルはありません。");
+                return true;
+            }
+
+            Set<String> communities = manager.getAllCommunities();
+
+            if (communities.isEmpty()) {
+                sender.sendMessage(ChatColor.RED + "配布対象のコミュニティが見つかりません。");
+                return true;
+            }
+
+            sender.sendMessage(ChatColor.GREEN + "=== コミュニティプール情報 ===");
+            sender.sendMessage(ChatColor.GRAY + "サイクルID: " + ChatColor.WHITE + activeCycle.getCycleId());
+            sender.sendMessage("");
+
+            // コミュニティごとのプール情報を表示
+            int totalDistribution = 0;
+            int totalRemaining = 0;
+
+            for (String communityName : communities) {
+                String displayName = manager.getDisplayName(communityName);
+                CommunityPool pool = poolTable.getPool(activeCycle.getCycleId(), communityName);
+
+                if (pool != null) {
+                    int remaining = pool.getRemainingAmount();
+                    int total = pool.getTotalAmount();
+                    int claimed = total - remaining;
+                    double claimedPercent = total > 0 ? (claimed * 100.0 / total) : 0;
+
+                    totalDistribution += total;
+                    totalRemaining += remaining;
+
+                    sender.sendMessage(ChatColor.YELLOW + displayName);
+                    sender.sendMessage(ChatColor.GRAY + "  合計: " + ChatColor.WHITE + total + "個" +
+                                      ChatColor.GRAY + " | 残り: " + ChatColor.AQUA + remaining + "個" +
+                                      ChatColor.GRAY + " | 受取済: " + ChatColor.GREEN + claimed + "個" +
+                                      ChatColor.GRAY + " (" + String.format("%.1f", claimedPercent) + "%)");
+                } else {
+                    sender.sendMessage(ChatColor.YELLOW + displayName);
+                    sender.sendMessage(ChatColor.GRAY + "  " + ChatColor.RED + "プール情報なし");
+                }
+            }
+
+            sender.sendMessage("");
+            sender.sendMessage(ChatColor.GREEN + "=== 合計 ===");
+            sender.sendMessage(ChatColor.GRAY + "総配布数: " + ChatColor.WHITE + totalDistribution + "個");
+            sender.sendMessage(ChatColor.GRAY + "残り: " + ChatColor.AQUA + totalRemaining + "個");
+            sender.sendMessage(ChatColor.GRAY + "受取済: " + ChatColor.GREEN + (totalDistribution - totalRemaining) + "個");
+
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "プール情報の取得中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "プール情報の取得に失敗しました。", e);
         }
 
         return true;
@@ -324,6 +400,7 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
                 subCommands.add("setitem");
                 subCommands.add("start");
                 subCommands.add("end");
+                subCommands.add("pools");
             }
 
             String input = args[0].toLowerCase();
