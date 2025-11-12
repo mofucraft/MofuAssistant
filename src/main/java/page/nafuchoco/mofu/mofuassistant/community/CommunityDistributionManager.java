@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * LuckPermsと統合してコミュニティグループを管理するクラス
  */
 public class CommunityDistributionManager {
-    private static final String COMMUNITY_GROUP_PREFIX = "community.";
+    private static final String DISTRIBUTION_PERMISSION = "osusowaken.enable";
     private final MofuAssistant plugin;
     private LuckPerms luckPerms;
 
@@ -59,6 +59,7 @@ public class CommunityDistributionManager {
 
     /**
      * プレイヤーが所属する全てのコミュニティグループを取得
+     * osusowaken.enableパーミッションを持つグループに所属しているかをチェック
      */
     public List<String> getPlayerCommunities(Player player) {
         if (!isLuckPermsAvailable()) {
@@ -70,11 +71,20 @@ public class CommunityDistributionManager {
             return Collections.emptyList();
         }
 
-        // getCachedDataを使用して、グループから継承されたパーミッションも含めて取得
-        return user.getCachedData().getPermissionData().getPermissionMap().keySet().stream()
-                .filter(permission -> permission.startsWith(COMMUNITY_GROUP_PREFIX))
-                .map(permission -> permission.substring(COMMUNITY_GROUP_PREFIX.length()))
-                .collect(Collectors.toList());
+        // プレイヤーが所属するグループの中で、osusowaken.enableパーミッションを持つグループを抽出
+        List<String> communities = new ArrayList<>();
+        for (Group group : luckPerms.getGroupManager().getLoadedGroups()) {
+            // グループがosusowaken.enableパーミッションを持っているかチェック
+            boolean hasPermission = group.getCachedData().getPermissionData().checkPermission(DISTRIBUTION_PERMISSION).asBoolean();
+            if (hasPermission) {
+                // プレイヤーがこのグループに所属しているかチェック
+                if (user.getInheritedGroups(user.getQueryOptions()).contains(group)) {
+                    communities.add(group.getName());
+                }
+            }
+        }
+
+        return communities;
     }
 
     /**
@@ -107,6 +117,7 @@ public class CommunityDistributionManager {
 
     /**
      * 全てのコミュニティグループを取得
+     * osusowaken.enableパーミッションを持つグループを抽出
      */
     public Set<String> getAllCommunities() {
         if (!isLuckPermsAvailable()) {
@@ -115,15 +126,13 @@ public class CommunityDistributionManager {
 
         Set<String> communities = new HashSet<>();
 
-        // 全てのグループからcommunity.*パーミッションを持つグループを抽出
+        // 全てのグループからosusowaken.enableパーミッションを持つグループを抽出
         for (Group group : luckPerms.getGroupManager().getLoadedGroups()) {
-            // グループのノードからcommunity.*パーミッションを探す
-            group.getNodes().stream()
-                    .filter(node -> node.getKey().startsWith(COMMUNITY_GROUP_PREFIX))
-                    .forEach(node -> {
-                        String communityName = node.getKey().substring(COMMUNITY_GROUP_PREFIX.length());
-                        communities.add(communityName);
-                    });
+            // グループがosusowaken.enableパーミッションを持っているかチェック
+            boolean hasPermission = group.getCachedData().getPermissionData().checkPermission(DISTRIBUTION_PERMISSION).asBoolean();
+            if (hasPermission) {
+                communities.add(group.getName());
+            }
         }
 
         return communities;
@@ -134,7 +143,8 @@ public class CommunityDistributionManager {
      * 1人: 160枚
      * 2人: 256枚 (+96枚)
      * 3人: 320枚 (+64枚)
-     * 4人以降: +1人につき+32枚
+     * 4～99人: +1人につき+32枚
+     * 100人以降: +1人につき+16枚
      */
     public int calculateDistributionAmount(int memberCount) {
         if (memberCount <= 0) {
@@ -145,9 +155,15 @@ public class CommunityDistributionManager {
             return 256;
         } else if (memberCount == 3) {
             return 320;
-        } else {
-            // 4人以降: 320 + (memberCount - 3) * 32
+        } else if (memberCount < 100) {
+            // 4～99人: 320 + (memberCount - 3) * 32
             return 320 + (memberCount - 3) * 32;
+        } else {
+            // 100人以降: 320 + (99 - 3) * 32 + (memberCount - 99) * 16
+            // = 320 + 96 * 32 + (memberCount - 99) * 16
+            // = 320 + 3072 + (memberCount - 99) * 16
+            // = 3392 + (memberCount - 99) * 16
+            return 3392 + (memberCount - 99) * 16;
         }
     }
 

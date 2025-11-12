@@ -66,20 +66,20 @@ public class DistributionCycle {
     }
 
     /**
-     * 次の配布開始時刻を計算（隔週金曜日15:00）
+     * 次の配布開始時刻を計算（隔週土曜日15:00）
      * @param lastDistributionTime 前回の配布時刻
      * @return 次の配布開始時刻
      */
     public static LocalDateTime calculateNextDistributionTime(LocalDateTime lastDistributionTime) {
-        LocalDateTime nextFriday = lastDistributionTime
-                .with(TemporalAdjusters.next(DayOfWeek.FRIDAY))
+        LocalDateTime nextSaturday = lastDistributionTime
+                .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
                 .withHour(15)
                 .withMinute(0)
                 .withSecond(0)
                 .withNano(0);
 
         // 隔週なので2週間後
-        return nextFriday.plusWeeks(1);
+        return nextSaturday.plusWeeks(1);
     }
 
     /**
@@ -88,21 +88,21 @@ public class DistributionCycle {
     public static DistributionCycle createNewCycle() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
 
-        // 今日が金曜日15時以降なら次の隔週金曜日、それ以外なら次の金曜日から
+        // 今日が土曜日15時以降なら次の隔週土曜日、それ以外なら次の土曜日から
         LocalDateTime startDateTime;
-        if (now.getDayOfWeek() == DayOfWeek.FRIDAY && now.getHour() >= 15) {
+        if (now.getDayOfWeek() == DayOfWeek.SATURDAY && now.getHour() >= 15) {
             startDateTime = calculateNextDistributionTime(now);
-        } else if (now.getDayOfWeek().getValue() > DayOfWeek.FRIDAY.getValue() ||
-                   (now.getDayOfWeek() == DayOfWeek.FRIDAY && now.getHour() < 15)) {
+        } else if (now.getDayOfWeek().getValue() > DayOfWeek.SATURDAY.getValue() ||
+                   (now.getDayOfWeek() == DayOfWeek.SATURDAY && now.getHour() < 15)) {
             startDateTime = now
-                    .with(TemporalAdjusters.nextOrSame(DayOfWeek.FRIDAY))
+                    .with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY))
                     .withHour(15)
                     .withMinute(0)
                     .withSecond(0)
                     .withNano(0);
         } else {
             startDateTime = now
-                    .with(TemporalAdjusters.next(DayOfWeek.FRIDAY))
+                    .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
                     .withHour(15)
                     .withMinute(0)
                     .withSecond(0)
@@ -124,15 +124,15 @@ public class DistributionCycle {
     public static DistributionCycle createImmediateCycle() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
 
-        // 次の隔週金曜日15時までを配布期間とする
+        // 次の隔週土曜日15時までを配布期間とする
         LocalDateTime endDateTime = now
-                .with(TemporalAdjusters.next(DayOfWeek.FRIDAY))
+                .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
                 .withHour(15)
                 .withMinute(0)
                 .withSecond(0)
                 .withNano(0);
 
-        // まだ次の金曜日が来ていない場合は、さらに次へ
+        // まだ次の土曜日が来ていない場合は、さらに次へ
         if (endDateTime.isBefore(now.plusDays(1))) {
             endDateTime = calculateNextDistributionTime(endDateTime.minusWeeks(1));
         }

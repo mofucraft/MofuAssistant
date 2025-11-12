@@ -234,18 +234,18 @@ public class DistributionScheduler {
     public LocalDateTime getNextDistributionTime() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
 
-        // 次の金曜日15時を計算
-        LocalDateTime nextFriday = now.with(java.time.temporal.TemporalAdjusters.next(DayOfWeek.FRIDAY))
+        // 次の土曜日15時を計算
+        LocalDateTime nextSaturday = now.with(java.time.temporal.TemporalAdjusters.next(DayOfWeek.SATURDAY))
                 .withHour(15)
                 .withMinute(0)
                 .withSecond(0)
                 .withNano(0);
 
-        // 今日が金曜日で15時前なら今日の15時
-        if (now.getDayOfWeek() == DayOfWeek.FRIDAY && now.getHour() < 15) {
+        // 今日が土曜日で15時前なら今日の15時
+        if (now.getDayOfWeek() == DayOfWeek.SATURDAY && now.getHour() < 15) {
             return now.withHour(15).withMinute(0).withSecond(0).withNano(0);
         }
 
-        return nextFriday;
+        return nextSaturday;
     }
 }
