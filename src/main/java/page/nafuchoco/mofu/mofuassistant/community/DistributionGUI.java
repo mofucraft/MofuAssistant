@@ -28,11 +28,13 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import page.nafuchoco.mofu.mofuassistant.MofuAssistant;
+import page.nafuchoco.mofu.mofuassistant.community.CommunityDistributionData;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -49,6 +51,7 @@ public class DistributionGUI implements Listener {
     private final DistributionCycleTable cycleTable;
     private final Map<UUID, String> playerViewingCommunity;
     private final Map<UUID, Boolean> playerAwaitingAmountInput;
+    private final Map<UUID, Integer> playerLogPage;
 
     public DistributionGUI(MofuAssistant plugin, CommunityDistributionManager manager,
                           CommunityItemStorage storage, CommunityDistributionTable distributionTable,
@@ -61,6 +64,7 @@ public class DistributionGUI implements Listener {
         this.cycleTable = cycleTable;
         this.playerViewingCommunity = new HashMap<>();
         this.playerAwaitingAmountInput = new HashMap<>();
+        this.playerLogPage = new HashMap<>();
     }
 
     /**
@@ -225,6 +229,21 @@ public class DistributionGUI implements Listener {
         }
         inv.setItem(15, customAmountButton);
 
+        // ログ確認ボタン
+        ItemStack logButton = new ItemStack(Material.BOOK);
+        ItemMeta logMeta = logButton.getItemMeta();
+        if (logMeta != null) {
+            logMeta.setDisplayName(ChatColor.AQUA + "受け取りログ");
+            List<String> logLore = new ArrayList<>();
+            logLore.add(ChatColor.GRAY + "このコミュニティの");
+            logLore.add(ChatColor.GRAY + "受け取りログを確認します");
+            logLore.add("");
+            logLore.add(ChatColor.YELLOW + "クリックして確認");
+            logMeta.setLore(logLore);
+            logButton.setItemMeta(logMeta);
+        }
+        inv.setItem(22, logButton);
+
         playerViewingCommunity.put(player.getUniqueId(), communityName);
         player.openInventory(inv);
     }
@@ -260,8 +279,36 @@ public class DistributionGUI implements Listener {
             return;
         }
 
+        // ログGUI
+        if (title.contains(" - ログ - ")) {
+            String communityName = playerViewingCommunity.get(player.getUniqueId());
+            if (communityName == null) {
+                player.closeInventory();
+                return;
+            }
+
+            int slot = event.getSlot();
+            Integer currentPage = playerLogPage.get(player.getUniqueId());
+            if (currentPage == null) {
+                currentPage = 0;
+            }
+
+            if (slot == 48) {
+                // 前のページ
+                openDistributionLogGUI(player, communityName, currentPage - 1);
+            } else if (slot == 50) {
+                // 次のページ
+                openDistributionLogGUI(player, communityName, currentPage + 1);
+            } else if (slot == 49) {
+                // 戻る
+                player.closeInventory();
+                openDistributionGUI(player, communityName);
+            }
+            return;
+        }
+
         // 配布GUI
-        if (title.startsWith(GUI_TITLE + " - ")) {
+        if (title.startsWith(GUI_TITLE + " - ") && !title.contains(" - ログ - ")) {
             String communityName = playerViewingCommunity.get(player.getUniqueId());
             if (communityName == null) {
                 player.closeInventory();
@@ -277,6 +324,10 @@ public class DistributionGUI implements Listener {
                 playerAwaitingAmountInput.put(player.getUniqueId(), true);
                 player.sendMessage(ChatColor.GREEN + "チャットで受け取りたい個数を入力してください。");
                 player.sendMessage(ChatColor.GRAY + "キャンセルする場合は「cancel」と入力してください。");
+            } else if (event.getSlot() == 22) {
+                // ログ確認
+                player.closeInventory();
+                openDistributionLogGUI(player, communityName, 0);
             }
         }
     }
@@ -463,8 +514,136 @@ public class DistributionGUI implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> giveItemToPlayer(player, communityName, amount));
     }
 
+    /**
+     * コミュニティの受け取りログGUIを開く
+     */
+    public void openDistributionLogGUI(Player player, String communityName, int page) {
+        if (!manager.isPlayerInCommunity(player, communityName)) {
+            player.sendMessage(ChatColor.RED + "あなたはこのコミュニティに所属していません。");
+            return;
+        }
+
+        // 現在のサイクル情報を取得
+        DistributionCycle activeCycle;
+        try {
+            activeCycle = cycleTable.getActiveCycle();
+            if (activeCycle == null) {
+                player.sendMessage(ChatColor.RED + "現在、アクティブな配布サイクルはありません。");
+                return;
+            }
+        } catch (SQLException e) {
+            player.sendMessage(ChatColor.RED + "配布状態の確認中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの確認に失敗しました。", e);
+            return;
+        }
+
+        // コミュニティのログを取得
+        List<CommunityDistributionData> logs;
+        try {
+            logs = distributionTable.getCommunityDistributions(activeCycle.getCycleId(), communityName);
+            // 新しい順にソート
+            logs.sort((a, b) -> b.getLastClaimTime().compareTo(a.getLastClaimTime()));
+        } catch (SQLException e) {
+            player.sendMessage(ChatColor.RED + "ログの取得中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "ログの取得に失敗しました。", e);
+            return;
+        }
+
+        if (logs.isEmpty()) {
+            player.sendMessage(ChatColor.YELLOW + "このコミュニティの受け取りログはまだありません。");
+            return;
+        }
+
+        String displayName = manager.getDisplayName(communityName);
+
+        // ページネーション
+        int logsPerPage = 45; // 5行 x 9列 = 45スロット
+        int totalPages = (int) Math.ceil((double) logs.size() / logsPerPage);
+        page = Math.max(0, Math.min(page, totalPages - 1));
+
+        int startIndex = page * logsPerPage;
+        int endIndex = Math.min(startIndex + logsPerPage, logs.size());
+
+        Inventory inv = Bukkit.createInventory(null, 54, GUI_TITLE + " - ログ - " + displayName);
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd HH:mm:ss");
+
+        // ログアイテムを表示
+        for (int i = startIndex; i < endIndex; i++) {
+            CommunityDistributionData data = logs.get(i);
+            ItemStack logItem = new ItemStack(Material.PLAYER_HEAD);
+            ItemMeta logMeta = logItem.getItemMeta();
+
+            if (logMeta != null) {
+                String playerName = Bukkit.getOfflinePlayer(data.getPlayerId()).getName();
+                if (playerName == null) {
+                    playerName = data.getPlayerId().toString().substring(0, 8);
+                }
+
+                logMeta.setDisplayName(ChatColor.YELLOW + playerName);
+                List<String> logLore = new ArrayList<>();
+                logLore.add(ChatColor.GRAY + "受取数: " + ChatColor.WHITE + data.getClaimedAmount() + "個");
+                logLore.add(ChatColor.GRAY + "最終受取: " + ChatColor.WHITE +
+                           dateFormat.format(data.getLastClaimTime()));
+                logMeta.setLore(logLore);
+                logItem.setItemMeta(logMeta);
+            }
+
+            inv.setItem(i - startIndex, logItem);
+        }
+
+        // ナビゲーションボタン
+        if (page > 0) {
+            // 前のページボタン
+            ItemStack prevButton = new ItemStack(Material.ARROW);
+            ItemMeta prevMeta = prevButton.getItemMeta();
+            if (prevMeta != null) {
+                prevMeta.setDisplayName(ChatColor.GREEN + "前のページ");
+                prevButton.setItemMeta(prevMeta);
+            }
+            inv.setItem(48, prevButton);
+        }
+
+        if (page < totalPages - 1) {
+            // 次のページボタン
+            ItemStack nextButton = new ItemStack(Material.ARROW);
+            ItemMeta nextMeta = nextButton.getItemMeta();
+            if (nextMeta != null) {
+                nextMeta.setDisplayName(ChatColor.GREEN + "次のページ");
+                nextButton.setItemMeta(nextMeta);
+            }
+            inv.setItem(50, nextButton);
+        }
+
+        // 戻るボタン
+        ItemStack backButton = new ItemStack(Material.BARRIER);
+        ItemMeta backMeta = backButton.getItemMeta();
+        if (backMeta != null) {
+            backMeta.setDisplayName(ChatColor.RED + "戻る");
+            backButton.setItemMeta(backMeta);
+        }
+        inv.setItem(49, backButton);
+
+        // ページ情報
+        ItemStack pageInfo = new ItemStack(Material.PAPER);
+        ItemMeta pageInfoMeta = pageInfo.getItemMeta();
+        if (pageInfoMeta != null) {
+            pageInfoMeta.setDisplayName(ChatColor.AQUA + "ページ " + (page + 1) + "/" + totalPages);
+            List<String> pageInfoLore = new ArrayList<>();
+            pageInfoLore.add(ChatColor.GRAY + "総ログ数: " + ChatColor.WHITE + logs.size());
+            pageInfoMeta.setLore(pageInfoLore);
+            pageInfo.setItemMeta(pageInfoMeta);
+        }
+        inv.setItem(53, pageInfo);
+
+        playerViewingCommunity.put(player.getUniqueId(), communityName);
+        playerLogPage.put(player.getUniqueId(), page);
+        player.openInventory(inv);
+    }
+
     public void cleanup() {
         playerViewingCommunity.clear();
         playerAwaitingAmountInput.clear();
+        playerLogPage.clear();
     }
 }
