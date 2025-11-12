@@ -19,6 +19,8 @@ package page.nafuchoco.mofu.mofuassistant.community;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.model.group.Group;
 import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.matcher.NodeMatcher;
+import net.luckperms.api.node.types.InheritanceNode;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -76,32 +78,36 @@ public class CommunityDistributionManager {
     }
 
     /**
-     * 特定のコミュニティに所属するプレイヤー数を取得
+     * 特定のコミュニティに所属するプレイヤー数を取得（オフラインも含む）
      */
     public int getCommunityMemberCount(String communityName) {
         if (!isLuckPermsAvailable()) {
             return 0;
         }
 
-        String permissionName = COMMUNITY_GROUP_PREFIX + communityName;
+        try {
+            // グループを取得
+            Group group = luckPerms.getGroupManager().getGroup(communityName);
+            if (group == null) {
+                plugin.getLogger().log(Level.WARNING, "Community group not found: " + communityName);
+                return 0;
+            }
 
-        // オンラインプレイヤーの中からこのコミュニティに所属している人数をカウント
-        // LuckPerms APIでは全ユーザーを取得するのは重い処理なので、オンラインプレイヤーのみを対象とする
-        return (int) Bukkit.getOnlinePlayers().stream()
-                .filter(player -> {
-                    User user = luckPerms.getUserManager().getUser(player.getUniqueId());
-                    if (user == null) {
-                        return false;
-                    }
-                    // グループから継承されたパーミッションも含めてチェック
-                    return user.getCachedData().getPermissionData().checkPermission(permissionName).asBoolean();
-                })
-                .count();
+            // このグループを継承しているユーザーをLuckPermsのストレージから検索
+            // オフラインプレイヤーも含めて取得
+            Set<UUID> members = luckPerms.getUserManager().searchAll(
+                    NodeMatcher.key(InheritanceNode.builder(communityName).build())
+            ).join();
+
+            return members.size();
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to get community member count for " + communityName, e);
+            return 0;
+        }
     }
 
     /**
-     * 全てのコミュニティグループをロードされたグループから取得
-     * 注意: これはオンラインプレイヤーのグループのみを含みます
+     * 全てのコミュニティグループを取得
      */
     public Set<String> getAllCommunities() {
         if (!isLuckPermsAvailable()) {
@@ -110,9 +116,15 @@ public class CommunityDistributionManager {
 
         Set<String> communities = new HashSet<>();
 
-        // オンラインプレイヤーのグループからコミュニティを抽出
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            communities.addAll(getPlayerCommunities(player));
+        // 全てのグループからcommunity.*パーミッションを持つグループを抽出
+        for (Group group : luckPerms.getGroupManager().getLoadedGroups()) {
+            // グループのノードからcommunity.*パーミッションを探す
+            group.getNodes().stream()
+                    .filter(node -> node.getKey().startsWith(COMMUNITY_GROUP_PREFIX))
+                    .forEach(node -> {
+                        String communityName = node.getKey().substring(COMMUNITY_GROUP_PREFIX.length());
+                        communities.add(communityName);
+                    });
         }
 
         return communities;
