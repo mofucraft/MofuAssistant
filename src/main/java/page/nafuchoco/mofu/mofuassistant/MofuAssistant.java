@@ -17,6 +17,7 @@
 package page.nafuchoco.mofu.mofuassistant;
 
 import lombok.val;
+import net.luckperms.api.LuckPerms;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -27,10 +28,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import page.nafuchoco.mofu.mofuassistant.community.*;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityDistributionTable;
+import page.nafuchoco.mofu.mofuassistant.database.CommunityInviteTable;
 import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DatabaseConnector;
 import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
@@ -61,6 +64,7 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
     private CommunityDistributionTable communityDistributionTable;
     private CommunityPoolTable communityPoolTable;
     private DistributionCycleTable distributionCycleTable;
+    private CommunityInviteTable communityInviteTable;
     private CommunityDistributionManager communityManager;
     private CommunityItemStorage communityItemStorage;
     private DistributionGUI distributionGUI;
@@ -115,6 +119,13 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
             getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the distribution cycle table.", e);
         }
 
+        communityInviteTable = new CommunityInviteTable("community_invites", connector);
+        try {
+            communityInviteTable.createTable();
+        } catch (SQLException e) {
+            getInstance().getLogger().log(Level.WARNING, "An error occurred while initializing the community invite table.", e);
+        }
+
         communityManager = new CommunityDistributionManager(this);
         communityItemStorage = new CommunityItemStorage(this);
         distributionGUI = new DistributionGUI(this, communityManager, communityItemStorage, communityDistributionTable, communityPoolTable, distributionCycleTable);
@@ -124,9 +135,20 @@ public final class MofuAssistant extends JavaPlugin implements Listener {
         distributionScheduler.start();
 
         // コマンドの登録
-        OsusowakenCommand osusowakenCommand = new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI, distributionScheduler, distributionCycleTable);
+        OsusowakenCommand osusowakenCommand = new OsusowakenCommand(this, communityManager, communityItemStorage, distributionGUI, distributionScheduler, distributionCycleTable, communityPoolTable);
         getCommand("osusowaken").setExecutor(osusowakenCommand);
         getCommand("osusowaken").setTabCompleter(osusowakenCommand);
+
+        // コミュニティコマンドの登録
+        RegisteredServiceProvider<LuckPerms> provider = Bukkit.getServicesManager().getRegistration(LuckPerms.class);
+        if (provider != null) {
+            LuckPerms luckPerms = provider.getProvider();
+            CommunityInviteCommand communityCommand = new CommunityInviteCommand(this, communityInviteTable, communityManager, luckPerms);
+            getCommand("community").setExecutor(communityCommand);
+            getCommand("community").setTabCompleter(communityCommand);
+        } else {
+            getLogger().log(Level.WARNING, "LuckPerms not found. Community commands will not be registered.");
+        }
 
         getServer().getPluginManager().registerEvents(new PeacefulModeEventListener(), this);
         getServer().getPluginManager().registerEvents(distributionGUI, this);

@@ -26,7 +26,7 @@ LuckPermsグループに基づいてアイテムを自動配布するシステ�
 
 **一般プレイヤー向けコマンド:**
 ```
-/osusowaken              # 配布GUIを開く
+/osusowaken menu         # 配布GUIを開く
 /osusowaken info [コミュニティ名]  # コミュニティ情報を表示
 /osusowaken status       # 現在の配布サイクル状態を表示
 /osusowaken help         # ヘルプを表示
@@ -37,10 +37,11 @@ LuckPermsグループに基づいてアイテムを自動配布するシステ�
 /osusowaken setitem      # 手に持っているアイテムを配布アイテムとして設定
 /osusowaken start        # 手動で配布サイクルを開始
 /osusowaken end          # 配布サイクルを終了
+/osusowaken pools        # 全コミュニティのプール情報を表示
 ```
 
 #### 受け取り方法
-1. `/osusowaken`コマンドでGUIを開く
+1. `/osusowaken menu`コマンドでGUIを開く
 2. コミュニティを選択（複数所属の場合）
 3. 受け取り方法を選択：
    - **全て受け取る**: プールに残っている全てのアイテムを受け取る

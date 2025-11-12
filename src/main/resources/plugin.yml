@@ -19,6 +19,11 @@ commands:
   osusowaken:
     description: Community item distribution system.
 
+  community:
+    description: Community management system.
+    usage: /community <invite|cancel|check|accept|deny|leave|who> [args...]
+    aliases: [co]
+
 permissions:
   mofuassistant.assistant:
     description: Allows you to use the assistant command.
