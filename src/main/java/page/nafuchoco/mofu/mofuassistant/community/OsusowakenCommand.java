@@ -67,25 +67,17 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 引数なし: GUIを開く
+        // 引数なし: ヘルプを表示
         if (args.length == 0) {
-            if (!(sender instanceof Player player)) {
-                sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
-                return true;
-            }
-
-            if (!player.hasPermission("mofuassistant.osusowaken")) {
-                player.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
-                return true;
-            }
-
-            gui.openCommunitySelectionGUI(player);
-            return true;
+            return handleHelp(sender);
         }
 
         String subCommand = args[0].toLowerCase();
 
         switch (subCommand) {
+            case "menu":
+                return handleMenu(sender);
+
             case "setitem":
                 return handleSetItem(sender);
 
@@ -111,6 +103,24 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ChatColor.RED + "不明なサブコマンドです。/osusowaken help でヘルプを表示します。");
                 return true;
         }
+    }
+
+    /**
+     * /osusowaken menu - アイテム配布GUIを開く
+     */
+    private boolean handleMenu(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + "このコマンドはプレイヤーのみ実行できます。");
+            return true;
+        }
+
+        if (!player.hasPermission("mofuassistant.osusowaken")) {
+            player.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        gui.openCommunitySelectionGUI(player);
+        return true;
     }
 
     /**
@@ -301,7 +311,7 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
      */
     private boolean handleHelp(CommandSender sender) {
         sender.sendMessage(ChatColor.GREEN + "=== Osusowaken コマンドヘルプ ===");
-        sender.sendMessage(ChatColor.YELLOW + "/osusowaken " + ChatColor.GRAY + "- アイテム配布GUIを開く");
+        sender.sendMessage(ChatColor.YELLOW + "/osusowaken menu " + ChatColor.GRAY + "- アイテム配布GUIを開く");
         sender.sendMessage(ChatColor.YELLOW + "/osusowaken info [community] " + ChatColor.GRAY + "- コミュニティ情報を表示");
         sender.sendMessage(ChatColor.YELLOW + "/osusowaken status " + ChatColor.GRAY + "- 配布状態を表示");
         sender.sendMessage(ChatColor.YELLOW + "/osusowaken help " + ChatColor.GRAY + "- このヘルプを表示");
@@ -395,7 +405,7 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> subCommands = new ArrayList<>(Arrays.asList("info", "status", "help"));
+            List<String> subCommands = new ArrayList<>(Arrays.asList("menu", "info", "status", "help"));
             if (sender.hasPermission("mofuassistant.osusowaken.admin")) {
                 subCommands.add("setitem");
                 subCommands.add("start");
