@@ -95,11 +95,10 @@ public class CommunityDistributionManager {
 
             // このグループを継承しているユーザーをLuckPermsのストレージから検索
             // オフラインプレイヤーも含めて取得
-            Set<UUID> members = luckPerms.getUserManager().searchAll(
+            // searchAll()はMap<UUID, Collection<Node>>を返すので、keySet()でUUIDのセットを取得
+            return luckPerms.getUserManager().searchAll(
                     NodeMatcher.key(InheritanceNode.builder(communityName).build())
-            ).join();
-
-            return members.size();
+            ).join().keySet().size();
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Failed to get community member count for " + communityName, e);
             return 0;
