@@ -20,12 +20,15 @@ import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 
 /**
  * 配布サイクル情報を管理するクラス
  */
 public class DistributionCycle {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+
     private final int cycleId;
     private final Timestamp startTime;
     private final Timestamp endTime;
@@ -52,6 +55,22 @@ public class DistributionCycle {
 
     public boolean isActive() {
         return active;
+    }
+
+    /**
+     * 開始時刻を日本時間の文字列形式で取得
+     */
+    public String getFormattedStartTime() {
+        LocalDateTime dateTime = startTime.toLocalDateTime();
+        return dateTime.format(FORMATTER);
+    }
+
+    /**
+     * 終了時刻を日本時間の文字列形式で取得
+     */
+    public String getFormattedEndTime() {
+        LocalDateTime dateTime = endTime.toLocalDateTime();
+        return dateTime.format(FORMATTER);
     }
 
     /**

@@ -27,6 +27,8 @@ import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 
@@ -39,6 +41,7 @@ public class DistributionScheduler {
     private final DistributionCycleTable cycleTable;
     private final CommunityPoolTable poolTable;
     private final CommunityDistributionManager communityManager;
+    private final DiscordWebhookNotifier webhookNotifier;
     private BukkitTask schedulerTask;
 
     public DistributionScheduler(MofuAssistant plugin, DistributionCycleTable cycleTable,
@@ -47,6 +50,11 @@ public class DistributionScheduler {
         this.cycleTable = cycleTable;
         this.poolTable = poolTable;
         this.communityManager = communityManager;
+
+        // Discord Webhook設定を読み込み
+        String webhookUrl = plugin.getConfig().getString("discord.webhookUrl", "");
+        boolean enableNotifications = plugin.getConfig().getBoolean("discord.enableNotifications", true);
+        this.webhookNotifier = new DiscordWebhookNotifier(plugin, webhookUrl, enableNotifications);
     }
 
     /**
@@ -104,13 +112,21 @@ public class DistributionScheduler {
         plugin.getLogger().log(Level.INFO, "初期配布サイクルを作成しました。ID: " + cycleId);
 
         // 全コミュニティのプールを初期化
-        initializePools(cycleId);
+        Map<String, Integer> distributions = initializePools(cycleId);
+
+        // Discord通知を送信
+        webhookNotifier.sendDistributionStartNotification(
+                "定期配布",
+                newCycle.getFormattedStartTime(),
+                newCycle.getFormattedEndTime(),
+                distributions
+        );
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
             Bukkit.broadcastMessage(ChatColor.GREEN + "[配布システム] 新しい配布サイクルが開始されました。");
-            Bukkit.broadcastMessage(ChatColor.YELLOW + "開始時刻: " + newCycle.getStartTime());
-            Bukkit.broadcastMessage(ChatColor.YELLOW + "終了時刻: " + newCycle.getEndTime());
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "開始時刻: " + newCycle.getFormattedStartTime());
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "終了時刻: " + newCycle.getFormattedEndTime());
         });
     }
 
@@ -139,16 +155,24 @@ public class DistributionScheduler {
         int cycleId = cycleTable.createCycle(newCycle);
 
         // 新しいプールを初期化
-        initializePools(cycleId);
+        Map<String, Integer> distributions = initializePools(cycleId);
 
         plugin.getLogger().log(Level.INFO, "配布サイクルを更新しました。新しいサイクルID: " + cycleId);
+
+        // Discord通知を送信
+        webhookNotifier.sendDistributionStartNotification(
+                "定期配布",
+                newCycle.getFormattedStartTime(),
+                newCycle.getFormattedEndTime(),
+                distributions
+        );
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
             Bukkit.broadcastMessage(ChatColor.RED + "[配布システム] 前回の配布期間が終了しました。");
             Bukkit.broadcastMessage(ChatColor.RED + "未回収のアイテムは破棄されました。");
             Bukkit.broadcastMessage(ChatColor.GREEN + "[配布システム] 新しい配布サイクルが開始されました。");
-            Bukkit.broadcastMessage(ChatColor.YELLOW + "次の配布期間: " + newCycle.getStartTime() + " ～ " + newCycle.getEndTime());
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "次の配布期間: " + newCycle.getFormattedStartTime() + " ～ " + newCycle.getFormattedEndTime());
         });
     }
 
@@ -174,14 +198,22 @@ public class DistributionScheduler {
         int cycleId = cycleTable.createCycle(newCycle);
 
         // 新しいプールを初期化
-        initializePools(cycleId);
+        Map<String, Integer> distributions = initializePools(cycleId);
 
         plugin.getLogger().log(Level.INFO, "手動で配布サイクルを開始しました。サイクルID: " + cycleId);
+
+        // Discord通知を送信
+        webhookNotifier.sendDistributionStartNotification(
+                "手動配布",
+                newCycle.getFormattedStartTime(),
+                newCycle.getFormattedEndTime(),
+                distributions
+        );
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
             Bukkit.broadcastMessage(ChatColor.GREEN + "[配布システム] 手動配布が開始されました。");
-            Bukkit.broadcastMessage(ChatColor.YELLOW + "配布期間: " + newCycle.getStartTime() + " ～ " + newCycle.getEndTime());
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "配布期間: " + newCycle.getFormattedStartTime() + " ～ " + newCycle.getFormattedEndTime());
         });
     }
 
@@ -215,17 +247,22 @@ public class DistributionScheduler {
 
     /**
      * 全コミュニティのプールを初期化
+     * @return コミュニティ名と配布数のマップ
      */
-    private void initializePools(int cycleId) throws SQLException {
+    private Map<String, Integer> initializePools(int cycleId) throws SQLException {
         Set<String> communities = communityManager.getAllCommunities();
+        Map<String, Integer> distributions = new HashMap<>();
 
         for (String communityName : communities) {
             int memberCount = communityManager.getCommunityMemberCount(communityName);
             int totalAmount = communityManager.calculateDistributionAmount(memberCount);
 
             poolTable.createOrResetPool(cycleId, communityName, totalAmount);
+            distributions.put(communityName, totalAmount);
             plugin.getLogger().log(Level.INFO, "コミュニティ「" + communityName + "」のプールを初期化しました。総配布数: " + totalAmount);
         }
+
+        return distributions;
     }
 
     /**

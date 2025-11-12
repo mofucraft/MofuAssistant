@@ -25,6 +25,12 @@ peacefulMode:
   keepChangeWorld: false # Keeps peaceful mode when switching worlds.
 
 
+# Discord webhook settings for distribution notifications
+discord:
+  webhookUrl: "" # Discord Webhook URL (空の場合は通知なし)
+  enableNotifications: true # Enable/Disable Discord notifications
+
+
 # Assists in the migration of player data.
 # SQLiteを使用している場合は、マイグレーション元のデータベースがMySQL/MariaDBでも動作します
 dataMigrationSupport:
