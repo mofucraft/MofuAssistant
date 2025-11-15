@@ -24,6 +24,7 @@ import page.nafuchoco.mofu.mofuassistant.database.CommunityPoolTable;
 import page.nafuchoco.mofu.mofuassistant.database.DistributionCycleTable;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
