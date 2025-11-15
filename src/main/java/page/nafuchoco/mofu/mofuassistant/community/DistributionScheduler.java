@@ -97,8 +97,20 @@ public class DistributionScheduler {
             return;
         }
 
-        // 現在時刻がサイクルの終了時刻を過ぎている場合
-        if (!activeCycle.isCurrentlyValid()) {
+        // 一時停止中の場合は何もしない
+        if (activeCycle.isPaused()) {
+            plugin.getLogger().log(Level.INFO, "配布サイクルは一時停止中です。");
+            return;
+        }
+
+        // 未来のサイクル（まだ開始していない）場合は待機
+        if (activeCycle.isFuture()) {
+            plugin.getLogger().log(Level.INFO, "配布サイクルは未来の日時に設定されています。開始時刻: " + activeCycle.getFormattedStartTime());
+            return;
+        }
+
+        // 現在時刻がサイクルの終了時刻を過ぎている場合のみ新しいサイクルを作成
+        if (activeCycle.isExpired()) {
             endCurrentCycleAndStartNew();
         }
     }
@@ -284,6 +296,50 @@ public class DistributionScheduler {
         }
 
         return nextSaturday;
+    }
+
+    /**
+     * 配布サイクルを一時停止
+     */
+    public void pauseCycle() throws SQLException {
+        DistributionCycle activeCycle = cycleTable.getActiveCycle();
+        if (activeCycle == null) {
+            throw new IllegalStateException("アクティブな配布サイクルがありません。");
+        }
+
+        if (activeCycle.isPaused()) {
+            throw new IllegalStateException("配布サイクルは既に一時停止中です。");
+        }
+
+        cycleTable.pauseCycle(activeCycle.getCycleId());
+        plugin.getLogger().log(Level.INFO, "配布サイクルを一時停止しました。サイクルID: " + activeCycle.getCycleId());
+
+        // オンラインプレイヤーに通知
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "[おすそわ券配布] 配布サイクルが一時停止されました。");
+        });
+    }
+
+    /**
+     * 配布サイクルを再開
+     */
+    public void resumeCycle() throws SQLException {
+        DistributionCycle activeCycle = cycleTable.getActiveCycle();
+        if (activeCycle == null) {
+            throw new IllegalStateException("アクティブな配布サイクルがありません。");
+        }
+
+        if (!activeCycle.isPaused()) {
+            throw new IllegalStateException("配布サイクルは一時停止していません。");
+        }
+
+        cycleTable.resumeCycle(activeCycle.getCycleId());
+        plugin.getLogger().log(Level.INFO, "配布サイクルを再開しました。サイクルID: " + activeCycle.getCycleId());
+
+        // オンラインプレイヤーに通知
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 配布サイクルが再開されました。");
+        });
     }
 
     /**

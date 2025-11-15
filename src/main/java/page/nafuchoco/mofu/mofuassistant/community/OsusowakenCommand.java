@@ -96,6 +96,12 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             case "pools":
                 return handlePools(sender);
 
+            case "pause":
+                return handlePause(sender);
+
+            case "resume":
+                return handleResume(sender);
+
             case "help":
                 return handleHelp(sender);
 
@@ -288,8 +294,21 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.GRAY + "サイクルID: " + ChatColor.WHITE + activeCycle.getCycleId());
             sender.sendMessage(ChatColor.GRAY + "開始時刻: " + ChatColor.WHITE + activeCycle.getStartTime());
             sender.sendMessage(ChatColor.GRAY + "終了時刻: " + ChatColor.WHITE + activeCycle.getEndTime());
-            sender.sendMessage(ChatColor.GRAY + "ステータス: " +
-                              (activeCycle.isCurrentlyValid() ? ChatColor.GREEN + "有効" : ChatColor.RED + "期限切れ"));
+
+            // ステータス表示
+            String statusText;
+            if (activeCycle.isPaused()) {
+                statusText = ChatColor.YELLOW + "一時停止中";
+            } else if (activeCycle.isFuture()) {
+                statusText = ChatColor.AQUA + "開始待機中";
+            } else if (activeCycle.isCurrentlyValid()) {
+                statusText = ChatColor.GREEN + "有効";
+            } else if (activeCycle.isExpired()) {
+                statusText = ChatColor.RED + "期限切れ";
+            } else {
+                statusText = ChatColor.GRAY + "不明";
+            }
+            sender.sendMessage(ChatColor.GRAY + "ステータス: " + statusText);
 
             // アイテム設定状況
             if (storage.hasItem()) {
@@ -301,6 +320,50 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
         } catch (SQLException e) {
             sender.sendMessage(ChatColor.RED + "配布状態の取得中にエラーが発生しました。");
             plugin.getLogger().log(Level.SEVERE, "配布状態の取得に失敗しました。", e);
+        }
+
+        return true;
+    }
+
+    /**
+     * /osusowaken pause - 配布を一時停止
+     */
+    private boolean handlePause(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            scheduler.pauseCycle();
+            sender.sendMessage(ChatColor.GREEN + "配布サイクルを一時停止しました。");
+        } catch (IllegalStateException e) {
+            sender.sendMessage(ChatColor.RED + e.getMessage());
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "配布サイクルの一時停止中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの一時停止に失敗しました。", e);
+        }
+
+        return true;
+    }
+
+    /**
+     * /osusowaken resume - 配布を再開
+     */
+    private boolean handleResume(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            scheduler.resumeCycle();
+            sender.sendMessage(ChatColor.GREEN + "配布サイクルを再開しました。");
+        } catch (IllegalStateException e) {
+            sender.sendMessage(ChatColor.RED + e.getMessage());
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "配布サイクルの再開中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの再開に失敗しました。", e);
         }
 
         return true;
@@ -322,6 +385,8 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken setitem " + ChatColor.GRAY + "- 手に持つアイテムを配布アイテムに設定");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken start " + ChatColor.GRAY + "- 配布を手動で開始");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken end " + ChatColor.GRAY + "- 配布を手動で終了（未回収破棄）");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken pause " + ChatColor.GRAY + "- 配布を一時停止");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken resume " + ChatColor.GRAY + "- 配布を再開");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken pools " + ChatColor.GRAY + "- 全コミュニティのプール情報を表示");
         }
 
@@ -410,6 +475,8 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
                 subCommands.add("setitem");
                 subCommands.add("start");
                 subCommands.add("end");
+                subCommands.add("pause");
+                subCommands.add("resume");
                 subCommands.add("pools");
             }
 

@@ -33,12 +33,18 @@ public class DistributionCycle {
     private final Timestamp startTime;
     private final Timestamp endTime;
     private final boolean active;
+    private final boolean paused;
 
     public DistributionCycle(int cycleId, Timestamp startTime, Timestamp endTime, boolean active) {
+        this(cycleId, startTime, endTime, active, false);
+    }
+
+    public DistributionCycle(int cycleId, Timestamp startTime, Timestamp endTime, boolean active, boolean paused) {
         this.cycleId = cycleId;
         this.startTime = startTime;
         this.endTime = endTime;
         this.active = active;
+        this.paused = paused;
     }
 
     public int getCycleId() {
@@ -55,6 +61,10 @@ public class DistributionCycle {
 
     public boolean isActive() {
         return active;
+    }
+
+    public boolean isPaused() {
+        return paused;
     }
 
     /**
@@ -75,13 +85,36 @@ public class DistributionCycle {
 
     /**
      * 現在時刻がこのサイクル内かチェック
+     * 一時停止中の場合はfalseを返す
      */
     public boolean isCurrentlyValid() {
-        if (!active) {
+        if (!active || paused) {
             return false;
         }
         Timestamp now = new Timestamp(System.currentTimeMillis());
         return now.after(startTime) && now.before(endTime);
+    }
+
+    /**
+     * サイクルが終了したかチェック
+     */
+    public boolean isExpired() {
+        if (!active) {
+            return false;
+        }
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        return now.after(endTime);
+    }
+
+    /**
+     * サイクルが未来（まだ開始していない）かチェック
+     */
+    public boolean isFuture() {
+        if (!active) {
+            return false;
+        }
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        return now.before(startTime);
     }
 
     /**
@@ -169,6 +202,7 @@ public class DistributionCycle {
                 ", startTime=" + startTime +
                 ", endTime=" + endTime +
                 ", active=" + active +
+                ", paused=" + paused +
                 '}';
     }
 }

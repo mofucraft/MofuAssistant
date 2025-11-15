@@ -39,7 +39,8 @@ public class DistributionCycleTable extends DatabaseTable {
                         "cycle_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                         "start_time TIMESTAMP NOT NULL, " +
                         "end_time TIMESTAMP NOT NULL, " +
-                        "active BOOLEAN DEFAULT 1" +
+                        "active BOOLEAN DEFAULT 1, " +
+                        "paused BOOLEAN DEFAULT 0" +
                         ")";
             } else {
                 createTableSQL = "CREATE TABLE IF NOT EXISTS " + getTablename() + " (" +
@@ -47,6 +48,7 @@ public class DistributionCycleTable extends DatabaseTable {
                         "start_time TIMESTAMP NOT NULL, " +
                         "end_time TIMESTAMP NOT NULL, " +
                         "active BOOLEAN DEFAULT TRUE, " +
+                        "paused BOOLEAN DEFAULT FALSE, " +
                         "INDEX idx_active (active), " +
                         "INDEX idx_times (start_time, end_time)" +
                         ")";
@@ -67,6 +69,33 @@ public class DistributionCycleTable extends DatabaseTable {
                     ps.execute();
                 }
             }
+
+            // 既存テーブルにpausedカラムを追加（存在しない場合）
+            addPausedColumnIfNotExists(connection, isSQLite);
+        }
+    }
+
+    /**
+     * 既存テーブルにpausedカラムを追加（マイグレーション）
+     */
+    private void addPausedColumnIfNotExists(Connection connection, boolean isSQLite) throws SQLException {
+        // カラムが存在するかチェック
+        boolean columnExists = false;
+        try (ResultSet rs = connection.getMetaData().getColumns(null, null, getTablename(), "paused")) {
+            columnExists = rs.next();
+        }
+
+        // カラムが存在しない場合は追加
+        if (!columnExists) {
+            String alterSQL;
+            if (isSQLite) {
+                alterSQL = "ALTER TABLE " + getTablename() + " ADD COLUMN paused BOOLEAN DEFAULT 0";
+            } else {
+                alterSQL = "ALTER TABLE " + getTablename() + " ADD COLUMN paused BOOLEAN DEFAULT FALSE";
+            }
+            try (PreparedStatement ps = connection.prepareStatement(alterSQL)) {
+                ps.execute();
+            }
         }
     }
 
@@ -76,11 +105,12 @@ public class DistributionCycleTable extends DatabaseTable {
     public int createCycle(DistributionCycle cycle) throws SQLException {
         try (Connection connection = getConnector().getConnection();
              PreparedStatement ps = connection.prepareStatement(
-                     "INSERT INTO " + getTablename() + " (start_time, end_time, active) VALUES (?, ?, ?)",
+                     "INSERT INTO " + getTablename() + " (start_time, end_time, active, paused) VALUES (?, ?, ?, ?)",
                      Statement.RETURN_GENERATED_KEYS)) {
             ps.setTimestamp(1, cycle.getStartTime());
             ps.setTimestamp(2, cycle.getEndTime());
             ps.setBoolean(3, cycle.isActive());
+            ps.setBoolean(4, cycle.isPaused());
             ps.executeUpdate();
 
             try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -105,7 +135,8 @@ public class DistributionCycleTable extends DatabaseTable {
                             rs.getInt("cycle_id"),
                             rs.getTimestamp("start_time"),
                             rs.getTimestamp("end_time"),
-                            rs.getBoolean("active")
+                            rs.getBoolean("active"),
+                            rs.getBoolean("paused")
                     );
                 }
             }
@@ -127,7 +158,8 @@ public class DistributionCycleTable extends DatabaseTable {
                             rs.getInt("cycle_id"),
                             rs.getTimestamp("start_time"),
                             rs.getTimestamp("end_time"),
-                            rs.getBoolean("active")
+                            rs.getBoolean("active"),
+                            rs.getBoolean("paused")
                     );
                 }
             }
@@ -173,7 +205,8 @@ public class DistributionCycleTable extends DatabaseTable {
                             rs.getInt("cycle_id"),
                             rs.getTimestamp("start_time"),
                             rs.getTimestamp("end_time"),
-                            rs.getBoolean("active")
+                            rs.getBoolean("active"),
+                            rs.getBoolean("paused")
                     ));
                 }
             }
@@ -188,6 +221,30 @@ public class DistributionCycleTable extends DatabaseTable {
         try (Connection connection = getConnector().getConnection();
              PreparedStatement ps = connection.prepareStatement(
                      "DELETE FROM " + distributionTableName)) {
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * サイクルを一時停止
+     */
+    public void pauseCycle(int cycleId) throws SQLException {
+        try (Connection connection = getConnector().getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "UPDATE " + getTablename() + " SET paused = TRUE WHERE cycle_id = ?")) {
+            ps.setInt(1, cycleId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * サイクルを再開
+     */
+    public void resumeCycle(int cycleId) throws SQLException {
+        try (Connection connection = getConnector().getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "UPDATE " + getTablename() + " SET paused = FALSE WHERE cycle_id = ?")) {
+            ps.setInt(1, cycleId);
             ps.executeUpdate();
         }
     }
