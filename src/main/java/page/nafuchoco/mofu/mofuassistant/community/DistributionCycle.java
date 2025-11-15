@@ -195,6 +195,21 @@ public class DistributionCycle {
         return new DistributionCycle(0, startTime, endTime, true);
     }
 
+    /**
+     * 指定した開始日時から配布サイクルを作成（予約配布用）
+     * @param startDateTime 配布開始日時
+     * @return 配布サイクル
+     */
+    public static DistributionCycle createScheduledCycle(LocalDateTime startDateTime) {
+        // 終了時刻は次の隔週土曜日15時
+        LocalDateTime endDateTime = calculateNextDistributionTime(startDateTime);
+
+        Timestamp startTime = Timestamp.valueOf(startDateTime);
+        Timestamp endTime = Timestamp.valueOf(endDateTime);
+
+        return new DistributionCycle(0, startTime, endTime, true);
+    }
+
     @Override
     public String toString() {
         return "DistributionCycle{" +

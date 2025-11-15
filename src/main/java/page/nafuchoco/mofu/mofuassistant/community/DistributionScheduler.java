@@ -189,9 +189,17 @@ public class DistributionScheduler {
     }
 
     /**
-     * 手動で配布サイクルを開始
+     * 手動で配布サイクルを開始（即座に開始）
      */
     public void startManualCycle() throws SQLException {
+        startManualCycle(null);
+    }
+
+    /**
+     * 手動で配布サイクルを開始
+     * @param startDateTime 開始日時（nullの場合は即座に開始）
+     */
+    public void startManualCycle(LocalDateTime startDateTime) throws SQLException {
         // 古いサイクルのプールをクリア
         DistributionCycle oldCycle = cycleTable.getActiveCycle();
         if (oldCycle != null) {
@@ -205,18 +213,29 @@ public class DistributionScheduler {
         String distributionTableName = plugin.getMofuAssistantTable().getTablename().replace("playerdata", "community_distribution");
         cycleTable.resetDistributionHistory(distributionTableName);
 
-        // 今すぐ開始するサイクルを作成
-        DistributionCycle newCycle = DistributionCycle.createImmediateCycle();
+        // サイクルを作成
+        DistributionCycle newCycle;
+        String cycleType;
+        if (startDateTime == null) {
+            // 今すぐ開始するサイクルを作成
+            newCycle = DistributionCycle.createImmediateCycle();
+            cycleType = "手動配布";
+        } else {
+            // 指定日時から開始するサイクルを作成
+            newCycle = DistributionCycle.createScheduledCycle(startDateTime);
+            cycleType = "予約配布";
+        }
+
         int cycleId = cycleTable.createCycle(newCycle);
 
         // 新しいプールを初期化
         Map<String, Integer> distributions = initializePools(cycleId);
 
-        plugin.getLogger().log(Level.INFO, "手動で配布サイクルを開始しました。サイクルID: " + cycleId);
+        plugin.getLogger().log(Level.INFO, cycleType + "サイクルを開始しました。サイクルID: " + cycleId);
 
         // Discord通知を送信（表示名に変換）
         webhookNotifier.sendDistributionStartNotification(
-                "手動配布",
+                cycleType,
                 newCycle.getFormattedStartTime(),
                 newCycle.getFormattedEndTime(),
                 convertToDisplayNames(distributions)
@@ -224,7 +243,12 @@ public class DistributionScheduler {
 
         // オンラインプレイヤーに通知
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 手動配布が開始されました。");
+            if (startDateTime == null) {
+                Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 手動配布が開始されました。");
+            } else {
+                Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 配布が予約されました。");
+                Bukkit.broadcastMessage(ChatColor.YELLOW + "開始予定: " + newCycle.getFormattedStartTime());
+            }
             Bukkit.broadcastMessage(ChatColor.YELLOW + "配布期間: " + newCycle.getFormattedStartTime() + " ～ " + newCycle.getFormattedEndTime());
         });
     }

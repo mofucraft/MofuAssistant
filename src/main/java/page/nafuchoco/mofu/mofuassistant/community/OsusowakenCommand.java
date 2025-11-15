@@ -85,7 +85,7 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
                 return handleInfo(sender, args);
 
             case "start":
-                return handleStart(sender);
+                return handleStart(sender, args);
 
             case "end":
                 return handleEnd(sender);
@@ -232,17 +232,45 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * /osusowaken start - 手動で配布を開始
+     * /osusowaken start [yyyy/MM/dd HH:mm:ss] - 手動で配布を開始
      */
-    private boolean handleStart(CommandSender sender) {
+    private boolean handleStart(CommandSender sender, String[] args) {
         if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
             sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
             return true;
         }
 
         try {
-            scheduler.startManualCycle();
-            sender.sendMessage(ChatColor.GREEN + "配布サイクルを手動で開始しました。");
+            // 引数がある場合は日時を解析
+            java.time.LocalDateTime startDateTime = null;
+            if (args.length >= 3) {
+                // args[1] = 日付 (yyyy/MM/dd), args[2] = 時刻 (HH:mm:ss)
+                String dateTimeStr = args[1] + " " + args[2];
+                try {
+                    java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+                    startDateTime = java.time.LocalDateTime.parse(dateTimeStr, formatter);
+
+                    // 過去の日時チェック
+                    java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Tokyo"));
+                    if (startDateTime.isBefore(now)) {
+                        sender.sendMessage(ChatColor.RED + "過去の日時は指定できません。");
+                        return true;
+                    }
+                } catch (java.time.format.DateTimeParseException e) {
+                    sender.sendMessage(ChatColor.RED + "日時の形式が正しくありません。");
+                    sender.sendMessage(ChatColor.YELLOW + "使用方法: /osusowaken start [yyyy/MM/dd HH:mm:ss]");
+                    sender.sendMessage(ChatColor.GRAY + "例: /osusowaken start 2025/12/25 15:00:00");
+                    return true;
+                }
+            }
+
+            scheduler.startManualCycle(startDateTime);
+            if (startDateTime == null) {
+                sender.sendMessage(ChatColor.GREEN + "配布サイクルを手動で開始しました。");
+            } else {
+                sender.sendMessage(ChatColor.GREEN + "配布サイクルを予約しました。");
+                sender.sendMessage(ChatColor.YELLOW + "開始予定: " + startDateTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+            }
         } catch (SQLException e) {
             sender.sendMessage(ChatColor.RED + "配布サイクルの開始中にエラーが発生しました。");
             plugin.getLogger().log(Level.SEVERE, "配布サイクルの開始に失敗しました。", e);
@@ -383,7 +411,9 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("");
             sender.sendMessage(ChatColor.RED + "管理者コマンド:");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken setitem " + ChatColor.GRAY + "- 手に持つアイテムを配布アイテムに設定");
-            sender.sendMessage(ChatColor.YELLOW + "/osusowaken start " + ChatColor.GRAY + "- 配布を手動で開始");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken start [日時] " + ChatColor.GRAY + "- 配布を手動で開始");
+            sender.sendMessage(ChatColor.GRAY + "  日時フォーマット: yyyy/MM/dd HH:mm:ss");
+            sender.sendMessage(ChatColor.GRAY + "  例: /osusowaken start 2025/12/25 15:00:00");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken end " + ChatColor.GRAY + "- 配布を手動で終了（未回収破棄）");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken pause " + ChatColor.GRAY + "- 配布を一時停止");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken resume " + ChatColor.GRAY + "- 配布を再開");
