@@ -102,6 +102,12 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             case "resume":
                 return handleResume(sender);
 
+            case "advance":
+                return handleAdvance(sender);
+
+            case "delay":
+                return handleDelay(sender);
+
             case "help":
                 return handleHelp(sender);
 
@@ -398,6 +404,50 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
+     * /osusowaken advance - 配布を1週間早める
+     */
+    private boolean handleAdvance(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            scheduler.advanceCycle();
+            sender.sendMessage(ChatColor.GREEN + "配布サイクルを1週間早めました。");
+        } catch (IllegalStateException e) {
+            sender.sendMessage(ChatColor.RED + e.getMessage());
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "配布サイクルの日時変更中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの日時変更に失敗しました。", e);
+        }
+
+        return true;
+    }
+
+    /**
+     * /osusowaken delay - 配布を1週間遅くする
+     */
+    private boolean handleDelay(CommandSender sender) {
+        if (!sender.hasPermission("mofuassistant.osusowaken.admin")) {
+            sender.sendMessage(ChatColor.RED + "このコマンドを実行する権限がありません。");
+            return true;
+        }
+
+        try {
+            scheduler.delayCycle();
+            sender.sendMessage(ChatColor.GREEN + "配布サイクルを1週間遅くしました。");
+        } catch (IllegalStateException e) {
+            sender.sendMessage(ChatColor.RED + e.getMessage());
+        } catch (SQLException e) {
+            sender.sendMessage(ChatColor.RED + "配布サイクルの日時変更中にエラーが発生しました。");
+            plugin.getLogger().log(Level.SEVERE, "配布サイクルの日時変更に失敗しました。", e);
+        }
+
+        return true;
+    }
+
+    /**
      * /osusowaken help - ヘルプメッセージ
      */
     private boolean handleHelp(CommandSender sender) {
@@ -417,6 +467,8 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken end " + ChatColor.GRAY + "- 配布を手動で終了（未回収破棄）");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken pause " + ChatColor.GRAY + "- 配布を一時停止");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken resume " + ChatColor.GRAY + "- 配布を再開");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken advance " + ChatColor.GRAY + "- 配布を1週間早める");
+            sender.sendMessage(ChatColor.YELLOW + "/osusowaken delay " + ChatColor.GRAY + "- 配布を1週間遅くする");
             sender.sendMessage(ChatColor.YELLOW + "/osusowaken pools " + ChatColor.GRAY + "- 全コミュニティのプール情報を表示");
         }
 
@@ -507,6 +559,8 @@ public class OsusowakenCommand implements CommandExecutor, TabCompleter {
                 subCommands.add("end");
                 subCommands.add("pause");
                 subCommands.add("resume");
+                subCommands.add("advance");
+                subCommands.add("delay");
                 subCommands.add("pools");
             }
 

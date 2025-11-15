@@ -248,4 +248,18 @@ public class DistributionCycleTable extends DatabaseTable {
             ps.executeUpdate();
         }
     }
+
+    /**
+     * サイクルの開始時刻と終了時刻を更新
+     */
+    public void updateCycleTimes(int cycleId, Timestamp newStartTime, Timestamp newEndTime) throws SQLException {
+        try (Connection connection = getConnector().getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "UPDATE " + getTablename() + " SET start_time = ?, end_time = ? WHERE cycle_id = ?")) {
+            ps.setTimestamp(1, newStartTime);
+            ps.setTimestamp(2, newEndTime);
+            ps.setInt(3, cycleId);
+            ps.executeUpdate();
+        }
+    }
 }

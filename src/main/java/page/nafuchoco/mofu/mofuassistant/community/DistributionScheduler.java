@@ -367,6 +367,74 @@ public class DistributionScheduler {
     }
 
     /**
+     * 配布サイクルを1週間早める
+     */
+    public void advanceCycle() throws SQLException {
+        DistributionCycle activeCycle = cycleTable.getActiveCycle();
+        if (activeCycle == null) {
+            throw new IllegalStateException("アクティブな配布サイクルがありません。");
+        }
+
+        // 新しい開始時刻と終了時刻を計算（1週間早める）
+        LocalDateTime currentStart = activeCycle.getStartTime().toLocalDateTime();
+        LocalDateTime currentEnd = activeCycle.getEndTime().toLocalDateTime();
+
+        LocalDateTime newStart = currentStart.minusWeeks(1);
+        LocalDateTime newEnd = currentEnd.minusWeeks(1);
+
+        // 過去の日時になっていないかチェック
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
+        if (newStart.isBefore(now)) {
+            throw new IllegalStateException("1週間早めると開始時刻が過去になってしまいます。");
+        }
+
+        // サイクルの日時を更新
+        Timestamp newStartTime = Timestamp.valueOf(newStart);
+        Timestamp newEndTime = Timestamp.valueOf(newEnd);
+        cycleTable.updateCycleTimes(activeCycle.getCycleId(), newStartTime, newEndTime);
+
+        plugin.getLogger().log(Level.INFO, "配布サイクルを1週間早めました。サイクルID: " + activeCycle.getCycleId());
+
+        // オンラインプレイヤーに通知
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 配布サイクルを1週間早めました。");
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "新しい開始時刻: " + newStart.format(java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "新しい終了時刻: " + newEnd.format(java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+        });
+    }
+
+    /**
+     * 配布サイクルを1週間遅くする
+     */
+    public void delayCycle() throws SQLException {
+        DistributionCycle activeCycle = cycleTable.getActiveCycle();
+        if (activeCycle == null) {
+            throw new IllegalStateException("アクティブな配布サイクルがありません。");
+        }
+
+        // 新しい開始時刻と終了時刻を計算（1週間遅くする）
+        LocalDateTime currentStart = activeCycle.getStartTime().toLocalDateTime();
+        LocalDateTime currentEnd = activeCycle.getEndTime().toLocalDateTime();
+
+        LocalDateTime newStart = currentStart.plusWeeks(1);
+        LocalDateTime newEnd = currentEnd.plusWeeks(1);
+
+        // サイクルの日時を更新
+        Timestamp newStartTime = Timestamp.valueOf(newStart);
+        Timestamp newEndTime = Timestamp.valueOf(newEnd);
+        cycleTable.updateCycleTimes(activeCycle.getCycleId(), newStartTime, newEndTime);
+
+        plugin.getLogger().log(Level.INFO, "配布サイクルを1週間遅くしました。サイクルID: " + activeCycle.getCycleId());
+
+        // オンラインプレイヤーに通知
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Bukkit.broadcastMessage(ChatColor.GREEN + "[おすそわ券配布] 配布サイクルを1週間遅くしました。");
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "新しい開始時刻: " + newStart.format(java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "新しい終了時刻: " + newEnd.format(java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")));
+        });
+    }
+
+    /**
      * 内部IDから表示名へのマップに変換
      */
     private Map<String, Integer> convertToDisplayNames(Map<String, Integer> distributions) {
