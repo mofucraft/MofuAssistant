@@ -161,8 +161,8 @@ public class DistributionCycle {
                     .withNano(0);
         }
 
-        // 終了時刻は次の配布開始時刻の直前
-        LocalDateTime endDateTime = calculateNextDistributionTime(startDateTime);
+        // 終了時刻は開始時刻から2週間後
+        LocalDateTime endDateTime = startDateTime.plusWeeks(2);
 
         Timestamp startTime = Timestamp.valueOf(startDateTime);
         Timestamp endTime = Timestamp.valueOf(endDateTime);
@@ -176,18 +176,8 @@ public class DistributionCycle {
     public static DistributionCycle createImmediateCycle() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
 
-        // 次の隔週土曜日15時までを配布期間とする
-        LocalDateTime endDateTime = now
-                .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
-                .withHour(15)
-                .withMinute(0)
-                .withSecond(0)
-                .withNano(0);
-
-        // まだ次の土曜日が来ていない場合は、さらに次へ
-        if (endDateTime.isBefore(now.plusDays(1))) {
-            endDateTime = calculateNextDistributionTime(endDateTime.minusWeeks(1));
-        }
+        // 終了時刻は開始時刻（現在時刻）から2週間後
+        LocalDateTime endDateTime = now.plusWeeks(2);
 
         Timestamp startTime = Timestamp.valueOf(now);
         Timestamp endTime = Timestamp.valueOf(endDateTime);
@@ -201,8 +191,8 @@ public class DistributionCycle {
      * @return 配布サイクル
      */
     public static DistributionCycle createScheduledCycle(LocalDateTime startDateTime) {
-        // 終了時刻は次の隔週土曜日15時
-        LocalDateTime endDateTime = calculateNextDistributionTime(startDateTime);
+        // 終了時刻は開始時刻から2週間後
+        LocalDateTime endDateTime = startDateTime.plusWeeks(2);
 
         Timestamp startTime = Timestamp.valueOf(startDateTime);
         Timestamp endTime = Timestamp.valueOf(endDateTime);
