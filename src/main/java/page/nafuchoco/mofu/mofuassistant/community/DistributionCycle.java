@@ -172,17 +172,45 @@ public class DistributionCycle {
 
     /**
      * 今すぐ開始する配布サイクルを作成（手動配布用）
+     * 終了時刻は次の定期配布開始時刻（次の土曜日15時）
      */
     public static DistributionCycle createImmediateCycle() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
 
-        // 終了時刻は開始時刻（現在時刻）から2週間後
-        LocalDateTime endDateTime = now.plusWeeks(2);
+        // 終了時刻は次の定期配布開始時刻
+        LocalDateTime endDateTime = calculateNextScheduledStartTime(now);
 
         Timestamp startTime = Timestamp.valueOf(now);
         Timestamp endTime = Timestamp.valueOf(endDateTime);
 
         return new DistributionCycle(0, startTime, endTime, true);
+    }
+
+    /**
+     * 次の定期配布開始時刻を計算
+     * @param currentTime 現在時刻
+     * @return 次の定期配布開始時刻（土曜日15時）
+     */
+    private static LocalDateTime calculateNextScheduledStartTime(LocalDateTime currentTime) {
+        // 今日が土曜日15時以降なら次の隔週土曜日、それ以外なら次の土曜日
+        if (currentTime.getDayOfWeek() == DayOfWeek.SATURDAY && currentTime.getHour() >= 15) {
+            return calculateNextDistributionTime(currentTime);
+        } else if (currentTime.getDayOfWeek().getValue() > DayOfWeek.SATURDAY.getValue() ||
+                   (currentTime.getDayOfWeek() == DayOfWeek.SATURDAY && currentTime.getHour() < 15)) {
+            return currentTime
+                    .with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY))
+                    .withHour(15)
+                    .withMinute(0)
+                    .withSecond(0)
+                    .withNano(0);
+        } else {
+            return currentTime
+                    .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
+                    .withHour(15)
+                    .withMinute(0)
+                    .withSecond(0)
+                    .withNano(0);
+        }
     }
 
     /**
